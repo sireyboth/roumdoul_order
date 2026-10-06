@@ -33,7 +33,12 @@ export type BoardOrder = {
 
 export type BoardRequest = { id: number; type: "waiter" | "bill"; table: string | null; created_at: string };
 
-export type Board = { server_time: string; orders: BoardOrder[]; requests: BoardRequest[] };
+export type Board = {
+  server_time: string;
+  settings?: { auto_print_kitchen: boolean };
+  orders: BoardOrder[];
+  requests: BoardRequest[];
+};
 
 export type CashierTable = {
   id: number;
@@ -219,4 +224,13 @@ export function chime(ctx: AudioContext | null) {
   };
   play(880, 0);
   play(1320, 0.18);
+}
+
+/** Print pages (80 mm). `auto` prints as soon as the page has loaded. */
+export function receiptUrl(billId: number, auto = true): string {
+  return `/staff/print/receipt?bill=${billId}${auto ? "&auto=1" : ""}`;
+}
+
+export function ticketUrl(orderId: number, station: string | null, auto = true): string {
+  return `/staff/print/ticket?order=${orderId}${station ? `&station=${station}` : ""}${auto ? "&auto=1" : ""}`;
 }

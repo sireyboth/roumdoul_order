@@ -62,6 +62,8 @@ Owner edits in Filament → model saved → `BumpsMenuVersion` increments `compa
 
 8. Shifts (B3): the cashier starts a shift by counting the drawer (dollars and riel). Payments are refused without an open shift; the server attaches each payment to it. Cash in / out needs a reason. Closing is a blind count: expected cash (opening + cash received − change ± cash in/out − cash refunds) vs counted, difference saved and shown in the back office (Restaurant → Shifts).
 
+9. Printing (B4): `/staff/print/receipt?bill=` (bill while open, receipt once paid; same items from several rounds merged; KHQR picture from Restaurant settings while money is due) and `/staff/print/ticket?order=&station=`. Pages load `GET /api/staff/bills/{id}/receipt` / `orders/{id}/ticket` and call `window.print()` after fonts and pictures load. 80 mm layout in `globals.css` (`.paper`, `@page`). Kitchen screens auto-print new orders in a hidden frame when the branch has "Print kitchen tickets automatically" on (Chrome `--kiosk-printing` skips the dialog).
+
 Still to come (B5): queued job updates `daily_branch_sales` / `daily_item_sales` for the bill's business date.
 
 ## Status tracks

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { SignedOut, since, staffApi, type BillDetail, type CashierTable, type CashierTables, type ShiftState } from "@/lib/staff";
+import { SignedOut, receiptUrl, since, staffApi, type BillDetail, type CashierTable, type CashierTables, type ShiftState } from "@/lib/staff";
 import { newKey } from "@/lib/table-api";
 import { formatMoney } from "@/lib/money";
 import Sheet from "../sheet";
@@ -269,6 +269,15 @@ function BillSheet({
                 <p className="mt-1 text-lg">Give change: <strong>{formatMoney(lastChange.amount, lastChange.currency)}</strong></p>
               )}
             </div>
+          )}
+          {bill.status !== "void" && (
+            <button
+              type="button"
+              onClick={() => window.open(receiptUrl(bill.id), "_blank", "width=420,height=700")}
+              className={`rounded-xl px-4 py-2.5 font-semibold ${bill.status === "paid" ? "bg-[var(--fg)] text-[var(--surface)]" : "border border-[var(--line)]"}`}
+            >
+              🖨️ {bill.status === "paid" ? "Print receipt" : "Print bill for the table"}
+            </button>
           )}
           {bill.status === "void" && (
             <p className="rounded-xl bg-[var(--danger-bg)] p-3 text-[var(--danger)]">Void: {bill.void_reason}</p>

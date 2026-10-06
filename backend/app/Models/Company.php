@@ -18,7 +18,7 @@ class Company extends Model implements HasAvatar, HasName
     use Auditable, SoftDeletes;
 
     protected $fillable = [
-        'name', 'slug', 'email', 'phone', 'logo_path', 'timezone', 'currency', 'khr_per_usd',
+        'name', 'slug', 'email', 'phone', 'logo_path', 'khqr_image_path', 'timezone', 'currency', 'khr_per_usd',
         'vat_bp', 'service_charge_bp', 'prices_include_vat', 'status', 'trial_ends_at',
         'telegram_chat_id', 'coreos_company_id',
     ];

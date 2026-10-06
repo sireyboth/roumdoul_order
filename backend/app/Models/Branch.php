@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Carbon;
 
 class Branch extends Model
 {
@@ -17,6 +18,7 @@ class Branch extends Model
     protected $fillable = [
         'company_id', 'name', 'code', 'address', 'phone', 'latitude', 'longitude',
         'day_ends_at', 'opening_hours', 'is_active', 'sort_order', 'coreos_branch_id',
+        'receipt_header', 'receipt_footer', 'auto_print_kitchen',
     ];
 
     protected function casts(): array
@@ -26,6 +28,7 @@ class Branch extends Model
             'longitude' => 'decimal:7',
             'opening_hours' => 'array',
             'is_active' => 'boolean',
+            'auto_print_kitchen' => 'boolean',
         ];
     }
 
@@ -67,7 +70,7 @@ class Branch extends Model
     public function businessDate(?\DateTimeInterface $at = null): string
     {
         $tz = $this->company?->timezone ?? 'Asia/Phnom_Penh';
-        $local = \Illuminate\Support\Carbon::instance($at ?? now())->setTimezone($tz);
+        $local = Carbon::instance($at ?? now())->setTimezone($tz);
         $cutoff = substr((string) ($this->day_ends_at ?? '04:00:00'), 0, 5);
 
         return ($local->format('H:i') < $cutoff ? $local->subDay() : $local)->toDateString();

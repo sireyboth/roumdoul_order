@@ -13,7 +13,7 @@ Goal of **Step 1**: sellable to real cafés and restaurants. Step 2 adds feature
 | Telegram alerts | 1A + B5 | ✅ new order · ⏳ daily summary (B5) |
 | Payments (cash / KHQR marked paid) | B1 + B2 | ✅ cashier screen, cash USD/KHR with change, KHQR/card, discounts, void, refund |
 | Shift close | B3 | ✅ start with counted cash ($ + ៛), cash in/out, blind count, difference; back-office Shifts page |
-| Printing (receipt + kitchen ticket) | B4 | ⏳ |
+| Printing (receipt + kitchen ticket) | B4 | ✅ 80 mm bill/receipt (Khmer + English, riel, KHQR picture), kitchen/bar tickets, auto-print option |
 | Export (Excel) + reports | B5 | ⏳ |
 | Upsell suggestions | 2 | planned |
 | Combo / set menus | 2 | planned |
@@ -58,7 +58,7 @@ Build in this order, each with tests and a browser run.
 ### B3 – shifts ✅ done (7 Oct 2026)
 `shifts`, `cash_movements`; open shift with counted cash; payments require an open shift; close shift → expected vs counted, difference; back-office Shifts page.
 
-### B4 – printing
+### B4 – printing ✅ done (7 Oct 2026)
 Browser print, 80 mm layout: customer receipt (company, branch, items, totals, riel, KHQR image from settings, footer) and kitchen/bar ticket per station. Branch print settings (header/footer text, auto-print kitchen tickets on new order).
 
 ### B5 – reports

@@ -184,6 +184,25 @@ class BackOfficeFormsTest extends TestCase
         $this->assertSame('waiter', $user->roleIn($this->company)->value);
     }
 
+    public function test_branch_printing_settings_save(): void
+    {
+        $branch = $this->company->branches()->firstOrFail();
+
+        Livewire::test(EditBranch::class, ['record' => $branch->getRouteKey()])
+            ->fillForm([
+                'receipt_header' => 'VAT TIN K001-123456789',
+                'receipt_footer' => 'សូមអរគុណ! Thank you!',
+                'auto_print_kitchen' => true,
+            ])
+            ->call('save')
+            ->assertHasNoFormErrors();
+
+        $branch->refresh();
+        $this->assertSame('VAT TIN K001-123456789', $branch->receipt_header);
+        $this->assertSame('សូមអរគុណ! Thank you!', $branch->receipt_footer);
+        $this->assertTrue($branch->auto_print_kitchen);
+    }
+
     public function test_restaurant_settings_save_percentages_as_basis_points(): void
     {
         Livewire::test(EditCompanyProfile::class)

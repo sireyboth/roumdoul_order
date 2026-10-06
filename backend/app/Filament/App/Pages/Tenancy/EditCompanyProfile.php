@@ -32,6 +32,13 @@ class EditCompanyProfile extends EditTenantProfile
                         ->disk('public')
                         ->directory('logos')
                         ->maxSize(2048),
+                    FileUpload::make('khqr_image_path')
+                        ->label('KHQR code (picture)')
+                        ->helperText('The KHQR your bank gave the shop. It is printed on bills so customers can scan and pay.')
+                        ->image()
+                        ->disk('public')
+                        ->directory('khqr')
+                        ->maxSize(2048),
                 ]),
             Section::make('Money')
                 ->description('Prices on the menu are entered in this currency. Riel amounts are shown next to dollar totals.')

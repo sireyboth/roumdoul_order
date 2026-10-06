@@ -69,14 +69,14 @@ Demo logins (password `password`): `owner@roumdoul.test` (/app, manager PIN `123
 - `app/Services` – `MenuBuilder` (token → table, cached branch menu), `MenuSync` (branch × item rows), `CompanyProvisioner` (new restaurant), `AuditLogger`, `TelegramNotifier`, `Ordering/OrderPlacer|OrderPresenter|ServiceRequests`, `Billing/BillCalculator` (pure bill maths) `|BillService` (open, discount, pay, void, refund) `|BillPresenter`, `Billing/ShiftService` (cash drawer: open, cash in/out, close, expected cash).
 - `app/Support` – `Money` (incl. riel rounding/conversion), `QrCode`, `Tenant`, `TenantScope`, `StaffAccess`, `ManagerPin` (owner/manager PIN approval, rate-limited).
 - `app/Enums` – `OrderStatus`, `StaffRole`, `CompanyStatus`, `Station`, `BillStatus`, `PaymentMethod`.
-- `app/Http/Controllers/Api` – `PublicMenuController`, `PublicOrderController`, `StaffAuthController`, `StaffBoardController`, `StaffCashierController` (cashier tables/bills/payments + waiter orders), `StaffShiftController` (cash drawer).
+- `app/Http/Controllers/Api` – `PublicMenuController`, `PublicOrderController`, `StaffAuthController`, `StaffBoardController`, `StaffCashierController` (cashier tables/bills/payments + waiter orders), `StaffShiftController` (cash drawer), `StaffPrintController` (receipt / ticket data).
 - `app/Filament/App/Resources` – Branches (+ Areas, Menu availability relation managers), DiningTables (QR, add many), Categories, MenuItems, OptionGroups, Staff, Orders, Shifts (read-only).
 - `routes/api.php` – public (`throttle:public-read|public-write`, limited per token) and staff (`auth:sanctum`).
 
 ## Code layout (frontend)
 
 - `src/app/t/[token]/page.tsx` – customer menu (server) → `components/menu-app.tsx` (client: cart, send order, tracking, call waiter).
-- `src/app/staff/*` – sign-in + `kitchen` (columns New/Preparing/Ready, timers, chime) + `waiter` (calls, ready to serve, sold-out) + `waiter/order` (new order for a table, reuses `ItemSheet`) + `cashier` (tables grid → bill sheet → `pay-panel`, `pin-form`; `shift-sheet` for the drawer).
+- `src/app/staff/*` – sign-in + `kitchen` (columns New/Preparing/Ready, timers, chime) + `waiter` (calls, ready to serve, sold-out) + `waiter/order` (new order for a table, reuses `ItemSheet`) + `cashier` (tables grid → bill sheet → `pay-panel`, `pin-form`; `shift-sheet` for the drawer) + `print/receipt`, `print/ticket` (80 mm, `use-print` hook).
 - `src/app/api/t/...` and `src/app/api/staff/...` – proxies to Laravel (`lib/backend.ts`).
 - `src/lib` – `types.ts`, `money.ts`, `i18n.ts` (Khmer/English strings), `table-api.ts`, `staff.ts`.
 - Next.js 16: `params`/`searchParams` are Promises; use `PageProps<'/route'>` / `RouteContext<'/route'>` types. Read `node_modules/next/dist/docs` when unsure (see `frontend/AGENTS.md`).

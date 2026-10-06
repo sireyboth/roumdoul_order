@@ -59,6 +59,7 @@ class StaffBoardController extends Controller
 
         return response()->json(['data' => [
             'server_time' => now()->toIso8601String(),
+            'settings' => ['auto_print_kitchen' => (bool) $branch->auto_print_kitchen],
             'orders' => $data,
             'requests' => $requests,
         ]])->header('Cache-Control', 'no-store');

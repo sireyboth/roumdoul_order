@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { chime, since, staffApi, type BoardOrder } from "@/lib/staff";
+import { chime, since, staffApi, ticketUrl, type BoardOrder } from "@/lib/staff";
 import { useBoard } from "./use-board";
 
 const COLUMNS: { key: string; title: string; statuses: BoardOrder["status"][] }[] = [
@@ -17,6 +17,26 @@ const NEXT: Partial<Record<BoardOrder["status"], { status: string; label: string
   preparing: { status: "ready", label: "Ready" },
 };
 
+/**
+ * Prints queued tickets one at a time in a hidden frame. Each frame opens the print dialog
+ * itself; with Chrome started as --kiosk-printing it goes straight to the printer.
+ */
+function printTickets(queue: number[], busy: { current: boolean }, station: string | null) {
+  if (busy.current) return;
+  const id = queue.shift();
+  if (id === undefined) return;
+  busy.current = true;
+  const frame = document.createElement("iframe");
+  frame.style.cssText = "position:fixed;right:0;bottom:0;width:0;height:0;border:0;";
+  frame.src = ticketUrl(id, station, true);
+  document.body.appendChild(frame);
+  window.setTimeout(() => {
+    frame.remove();
+    busy.current = false;
+    printTickets(queue, busy, station);
+  }, 8000);
+}
+
 export default function KitchenBoard({ branchId, station }: { branchId: number; station: string | null }) {
   const { board, error, signedOut, now, refresh } = useBoard(branchId, station);
   const [soundOn, setSoundOn] = useState(false);
@@ -24,14 +44,21 @@ export default function KitchenBoard({ branchId, station }: { branchId: number; 
   const [actionError, setActionError] = useState<string | null>(null);
   const audio = useRef<AudioContext | null>(null);
   const seen = useRef<Set<number> | null>(null);
+  const printQueue = useRef<number[]>([]);
+  const printing = useRef(false);
 
-  // Chime when an order appears that this screen hasn't seen before.
+  // Chime (and auto-print, if the branch wants it) when an order appears that this screen hasn't seen before.
   useEffect(() => {
     if (!board) return;
     const ids = new Set(board.orders.filter((o) => o.status === "placed").map((o) => o.id));
-    if (seen.current && soundOn && [...ids].some((id) => !seen.current!.has(id))) chime(audio.current);
+    const fresh = seen.current ? [...ids].filter((id) => !seen.current!.has(id)) : [];
+    if (fresh.length > 0 && soundOn) chime(audio.current);
+    if (fresh.length > 0 && board.settings?.auto_print_kitchen) {
+      printQueue.current.push(...fresh);
+      printTickets(printQueue.current, printing, station);
+    }
     seen.current = new Set([...(seen.current ?? []), ...ids]);
-  }, [board, soundOn]);
+  }, [board, soundOn, station]);
 
   function enableSound() {
     audio.current ??= new AudioContext();
@@ -116,8 +143,18 @@ export default function KitchenBoard({ branchId, station }: { branchId: number; 
                       <p className="text-xl font-bold">
                         {order.table ?? "—"} <span className="text-base font-medium text-white/50">#{order.number}</span>
                       </p>
-                      <span className={`tabular-nums text-sm font-semibold ${late ? "text-red-400" : warn ? "text-amber-300" : "text-white/60"}`}>
-                        {age.label}
+                      <span className="flex items-center gap-2">
+                        <span className={`tabular-nums text-sm font-semibold ${late ? "text-red-400" : warn ? "text-amber-300" : "text-white/60"}`}>
+                          {age.label}
+                        </span>
+                        <button
+                          type="button"
+                          aria-label={`Print ticket #${order.number}`}
+                          onClick={() => window.open(ticketUrl(order.id, station), "_blank", "width=420,height=600")}
+                          className="rounded bg-white/10 px-1.5 py-0.5 text-sm"
+                        >
+                          🖨️
+                        </button>
                       </span>
                     </div>
                     <ul className="flex flex-col gap-1">

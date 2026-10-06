@@ -83,6 +83,7 @@ A restaurant business = Filament tenant. Holds currency, riel rate, VAT/service 
 | `email` | varchar | yes |  |  |
 | `phone` | varchar | yes |  |  |
 | `logo_path` | varchar | yes |  |  |
+| `khqr_image_path` | varchar | yes |  | the shop's static KHQR picture, printed on unpaid bills (B4) |
 | `timezone` | varchar |  | Asia/Phnom_Penh |  |
 | `currency` | varchar |  | USD |  |
 | `khr_per_usd` | integer |  | 4100 |  |
@@ -173,6 +174,8 @@ A physical shop. `day_ends_at` sets the business-day cutoff; `menu_version` is b
 | `latitude` | numeric | yes |  |  |
 | `longitude` | numeric | yes |  |  |
 | `day_ends_at` | time |  | 04:00:00 |  |
+| `receipt_header` / `receipt_footer` | varchar(500) | yes |  | printed on bills and receipts (B4) |
+| `auto_print_kitchen` | tinyint |  | 0 | kitchen/bar screens print new orders (B4) |
 | `opening_hours` | text | yes |  |  |
 | `is_active` | tinyint |  | 1 |  |
 | `menu_version` | integer |  | 1 |  |
