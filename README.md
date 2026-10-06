@@ -13,6 +13,15 @@ roumdoul_order/
                 /staff         kitchen, waiter, cashier screens (Step 1)
 ```
 
+## Docs
+
+- `CLAUDE.md` – guide for Claude in VS Code (rules, layout, gotchas, next task)
+- `docs/architecture.md` – how the parts connect and how data flows
+- `docs/database.md` – every table and column, plus planned tables
+- `docs/roadmap.md` – what is done and what comes next
+- `docs/step2-features.md` – how each Step 2 feature will work
+- Online diagrams: https://claude.ai/artifact/XFXdQJczECUWxJoNUX5Rvi (private to the owner)
+
 ## What Step 0 includes
 
 - Restaurants are **companies** (tenants). Each has branches, table areas, tables, a menu, staff and a plan.

@@ -345,8 +345,8 @@ One visit to a table: opened by the first order, `bill_requested` when the custo
 | Column | Type | Null | Default | References |
 |---|---|---|---|---|
 | `id` | integer |  |  |  |
-| `company_id` | integer |  |  | companies.id (cascade) |
-| `branch_id` | integer |  |  | branches.id (cascade) |
+| `company_id` | integer |  |  | companies.id (restrict) |
+| `branch_id` | integer |  |  | branches.id (restrict) |
 | `dining_table_id` | integer |  |  | dining_tables.id (cascade) |
 | `status` | varchar |  | open |  |
 | `opened_at` | datetime |  |  |  |
@@ -355,7 +355,7 @@ One visit to a table: opened by the first order, `bill_requested` when the custo
 | `created_at` | datetime | yes |  |  |
 | `updated_at` | datetime | yes |  |  |
 
-Indexes: `(branch_id, status)`, `(dining_table_id, status)`
+Indexes: `(branch_id, status)`, `(dining_table_id, status)`. MySQL only: generated column `open_table_id = IF(status <> 'closed', dining_table_id, NULL)` with `UNIQUE (open_table_id)`, so a table can never have two open visits.
 
 ### `orders`
 
@@ -364,8 +364,8 @@ One 'Send order' tap. `number` restarts daily per branch; `business_date` follow
 | Column | Type | Null | Default | References |
 |---|---|---|---|---|
 | `id` | integer |  |  |  |
-| `company_id` | integer |  |  | companies.id (cascade) |
-| `branch_id` | integer |  |  | branches.id (cascade) |
+| `company_id` | integer |  |  | companies.id (restrict) |
+| `branch_id` | integer |  |  | branches.id (restrict) |
 | `dining_table_id` | integer | yes |  | dining_tables.id (set null) |
 | `table_session_id` | integer | yes |  | table_sessions.id (set null) |
 | `number` | integer |  |  |  |
@@ -388,7 +388,7 @@ One 'Send order' tap. `number` restarts daily per branch; `business_date` follow
 | `created_at` | datetime | yes |  |  |
 | `updated_at` | datetime | yes |  |  |
 
-Indexes: `UNIQUE (branch_id, business_date, number)`, `(branch_id, status, created_at)`, `(company_id, business_date)`, `UNIQUE (dining_table_id, idempotency_key)`
+Indexes: `UNIQUE (branch_id, business_date, number)`, `(branch_id, status, created_at)`, `(company_id, business_date)`, `UNIQUE (branch_id, idempotency_key)` (a key reused from another table is refused)
 
 ### `order_items`
 
@@ -397,7 +397,7 @@ Snapshot of what was ordered: names, station, unit price incl. options, quantity
 | Column | Type | Null | Default | References |
 |---|---|---|---|---|
 | `id` | integer |  |  |  |
-| `company_id` | integer |  |  | companies.id (cascade) |
+| `company_id` | integer |  |  | companies.id (restrict) |
 | `order_id` | integer |  |  | orders.id (cascade) |
 | `menu_item_id` | integer | yes |  | menu_items.id (set null) |
 | `name_km` | varchar |  |  |  |
@@ -434,71 +434,115 @@ Indexes: `(branch_id, status)`
 ## Rules the schema relies on
 
 1. **Money:** integers in minor units only. Totals are always recomputed on the server.
-2. **Snapshots:** `order_items` copies names, prices and options; bills and payments (part B) copy the riel rate. Editing the menu or the rate never changes history.
+2. **Snapshots:** `order_items` copies names, prices and options; bills copy the riel rate, VAT and service charge %, and payments copy the riel rate. Editing the menu or the rate never changes history.
 3. **Tenant isolation:** every query in the back office is scoped to the Filament tenant through each model's `company()` relation. Public endpoints find company and branch **only** from the table's `qr_token`. Staff API checks membership with `App\Support\StaffAccess`.
-4. **Idempotency:** a retried "Send order" with the same key returns the existing order.
-5. **Locks:** placing an order locks the branch row (daily numbering) and the table row (one open session per table).
+4. **Idempotency:** a retried "Send order" or payment with the same key returns the existing record.
+5. **Locks:** always in the order branch → table → bill. Placing an order locks the branch (daily numbering) and the table (one open session per table); a payment locks the table and the bill, so a new order can never join a visit that is being closed.
 6. **Business date:** `Branch::businessDate()` uses the company timezone and the branch `day_ends_at` cutoff.
 7. **Menu cache:** key `menu:{branch}:{company.menu_version}.{branch.menu_version}`; any menu change bumps a version (`BumpsMenuVersion`).
 8. **Status changes:** only through `Order::moveTo()`, which enforces `OrderStatus::canMoveTo()`, stamps the time and writes the audit log. Cancelling needs a reason.
 
-## Planned for Step 1 part B
+## Billing (Step 1 part B, B1)
 
-### Fixes to existing tables (B1)
+All changes go through `App\Services\Billing\BillService`; the arithmetic is the pure `BillCalculator` (subtotal → discounts → service charge → VAT → riel total rounded to 100៛). Discounts, voids and refunds need a manager PIN (`App\Support\ManagerPin`, 5 wrong tries per minute).
 
-| # | Change | Why |
-|---|---|---|
-| 1 | `orders`, `order_items`, `table_sessions` and the new money tables: `restrictOnDelete` instead of `cascadeOnDelete` on company / branch | Deleting a branch must never erase sales history (companies and branches are soft-deleted anyway) |
-| 2 | `orders` unique `(dining_table_id, idempotency_key)` → `(branch_id, idempotency_key)` | Keeps retry protection for takeaway / pickup orders with no table |
-| 3 | MySQL only: generated column `table_sessions.open_table_id = IF(status <> 'closed', dining_table_id, NULL)` + unique index | Database-level guarantee of one open visit per table |
-| 4 | Billing amounts live on `bills`, not on `orders` | Orders keep `subtotal`; VAT, service charge and discounts belong to the bill |
-| 5 | Copy `khr_per_usd` onto every bill and payment | Old receipts stay correct when the rate changes |
-| 6 | **Proposed, awaiting owner:** replace `name_km` / `name_en` / `name_zh` (and `description_*`) on `categories`, `menu_items`, `option_groups`, `options` with JSON `name` / `description` (`{"km","en","zh",...}`); add `companies.languages` JSON | Chinese is missing on options today; JSON lets a restaurant add any language without a schema change. Order item snapshots then store the JSON too. |
+B1 also changed existing tables: `orders`, `order_items`, `table_sessions` now use `restrictOnDelete` for company / branch, `orders` retry keys are unique per branch, and MySQL has the one-open-visit-per-table index (see `table_sessions`).
 
 ### `bills`
-One per table visit.
 
-| Column | Type | Notes |
-|---|---|---|
-| id, company_id, branch_id | FK | restrictOnDelete |
-| table_session_id | FK, **unique** | one bill per visit |
-| number | int | receipt number, restarts daily per branch |
-| business_date | date | |
-| currency | char(3) | |
-| khr_per_usd | int | snapshot |
-| subtotal | int | sum of non-cancelled orders |
-| discount_total | int | from `bill_adjustments` |
-| service_charge | int | company % at billing time |
-| vat | int | company % at billing time (0 if prices include VAT) |
-| total | int | |
-| total_khr | int | rounded to nearest 100៛ |
-| paid_total | int | sum of confirmed payments |
-| status | string | `open` → `paid`, or `void` |
-| paid_at, voided_at, void_reason, voided_by_user_id | | void needs manager PIN |
+One per table visit. Amounts are recomputed while `open` (new or cancelled orders, discounts) and frozen once `paid` or `void`. Rates are copied from the company when the bill opens.
 
-Indexes: UNIQUE `(branch_id, business_date, number)`, `(branch_id, status)`
+| Column | Type | Null | Default | References |
+|---|---|---|---|---|
+| `id` | integer |  |  |  |
+| `company_id` | integer |  |  | companies.id (restrict) |
+| `branch_id` | integer |  |  | branches.id (restrict) |
+| `table_session_id` | integer |  |  | table_sessions.id (restrict), **unique** |
+| `number` | integer |  |  | receipt number, restarts daily per branch |
+| `business_date` | date |  |  |  |
+| `currency` | char(3) |  |  |  |
+| `khr_per_usd` | integer |  |  | snapshot |
+| `service_charge_bp` | integer |  | 0 | snapshot |
+| `vat_bp` | integer |  | 0 | snapshot |
+| `prices_include_vat` | tinyint |  | 1 | snapshot |
+| `subtotal` | integer |  | 0 | non-cancelled orders of the visit |
+| `discount_total` | integer |  | 0 | from active `bill_adjustments` |
+| `service_charge` | integer |  | 0 |  |
+| `vat` | integer |  | 0 | 0 when prices include VAT |
+| `total` | integer |  | 0 |  |
+| `total_khr` | integer |  | 0 | rounded to the nearest 100៛ |
+| `paid_total` | integer |  | 0 | sum of confirmed payments |
+| `status` | varchar |  | open | open → paid, or void |
+| `opened_by_user_id` | integer | yes |  | users.id (set null) |
+| `paid_at` | datetime | yes |  |  |
+| `voided_at` | datetime | yes |  |  |
+| `void_reason` | varchar | yes |  |  |
+| `voided_by_user_id` | integer | yes |  | users.id (set null) |
+| `created_at` / `updated_at` | datetime | yes |  |  |
+
+Indexes: `UNIQUE (table_session_id)`, `UNIQUE (branch_id, business_date, number)`, `(branch_id, status)`, `(company_id, business_date)`
+
+Full payment → bill `paid`, visit `closed` (table free), served orders → completed, open calls for the visit marked done. Void (PIN + reason) is only allowed with no confirmed payments and also closes the visit.
 
 ### `bill_adjustments`
-Discounts. `bill_id, type (percent|fixed), value, amount, reason, approved_by_user_id`. Manager PIN required.
+
+Discounts, applied in the order they were added. Removing one sets `removed_at` (kept for the audit trail).
+
+| Column | Type | Null | Default | References |
+|---|---|---|---|---|
+| `id` | integer |  |  |  |
+| `company_id` | integer |  |  | companies.id (restrict) |
+| `bill_id` | integer |  |  | bills.id (restrict) |
+| `type` | varchar |  |  | percent, fixed |
+| `value` | integer |  |  | percent: basis points (1000 = 10%); fixed: minor units |
+| `amount` | integer |  | 0 | what it took off, set by the calculator |
+| `reason` | varchar |  |  |  |
+| `created_by_user_id` | integer | yes |  | users.id (set null) |
+| `approved_by_user_id` | integer | yes |  | users.id (set null), the PIN owner |
+| `removed_at` | datetime | yes |  |  |
+| `removed_by_user_id` | integer | yes |  | users.id (set null) |
+| `created_at` / `updated_at` | datetime | yes |  |  |
+
+Indexes: `(bill_id, removed_at)`
 
 ### `payments`
-A bill can have several (part cash, part KHQR).
 
-| Column | Type | Notes |
-|---|---|---|
-| id, company_id, branch_id, bill_id, shift_id | FK | |
-| idempotency_key | string | UNIQUE `(branch_id, idempotency_key)` |
-| method | string | cash, khqr, card, other |
-| amount | int | bill currency |
-| tendered_amount, tendered_currency | int, char(3) | e.g. 50,000 KHR handed over |
-| change_amount, change_currency | int, char(3) | change given in USD or KHR |
-| khr_per_usd | int | snapshot |
-| reference | string null | KHQR transaction id, UNIQUE `(branch_id, reference)` |
-| status | string | confirmed, refunded |
-| received_by_user_id, paid_at, business_date | | |
-| refund_reason, refunded_by_user_id, refunded_at | | manager PIN |
+A bill can have several (part cash, part KHQR). Never deleted; a mistake is refunded (PIN + reason). Refunding on an open bill makes the amount due again; on a paid bill the sale stays closed and reports subtract the refund.
 
-Indexes: `(bill_id)`, `(shift_id, method)`, `(branch_id, business_date)`
+| Column | Type | Null | Default | References |
+|---|---|---|---|---|
+| `id` | integer |  |  |  |
+| `company_id` | integer |  |  | companies.id (restrict) |
+| `branch_id` | integer |  |  | branches.id (restrict) |
+| `bill_id` | integer |  |  | bills.id (restrict) |
+| `shift_id` | integer | yes |  | cash drawer shift (B3) |
+| `idempotency_key` | varchar |  |  | retry returns the same payment |
+| `method` | varchar |  |  | cash, khqr, card, other |
+| `amount` | integer |  |  | applied to the bill, bill currency |
+| `tendered_amount` | integer | yes |  | cash handed over (cents or riel) |
+| `tendered_currency` | char(3) | yes |  | USD, KHR |
+| `change_amount` | integer |  | 0 | in `change_currency` |
+| `change_currency` | char(3) | yes |  | USD, KHR |
+| `khr_per_usd` | integer |  |  | snapshot |
+| `reference` | varchar | yes |  | KHQR transaction id |
+| `status` | varchar |  | confirmed | confirmed, refunded |
+| `received_by_user_id` | integer | yes |  | users.id (set null) |
+| `paid_at` | datetime |  |  |  |
+| `business_date` | date |  |  |  |
+| `refund_reason` | varchar | yes |  |  |
+| `refunded_by_user_id` | integer | yes |  | users.id (set null) |
+| `refunded_at` | datetime | yes |  |  |
+| `created_at` / `updated_at` | datetime | yes |  |  |
+
+Indexes: `UNIQUE (branch_id, idempotency_key)`, `UNIQUE (branch_id, reference)`, `(bill_id)`, `(shift_id, method)`, `(branch_id, business_date)`
+
+Cash rules: riel handed over is compared with the due amount rounded to 100៛, so paying exactly the riel total settles the bill; a smaller amount credits only what was given (rounded down). KHQR / card / other can never pay more than is due; only cash gives change.
+
+## Planned for Step 1 part B
+
+### Still awaiting the owner
+
+**Translatable names (proposed fix #6):** replace `name_km` / `name_en` / `name_zh` (and `description_*`) on `categories`, `menu_items`, `option_groups`, `options` with JSON `name` / `description` (`{"km","en","zh",...}`) and add `companies.languages` JSON. Chinese is missing on options today; JSON lets a restaurant add any language without a schema change. Order item snapshots would then store the JSON too. Not built until the owner decides.
 
 ### `shifts`
 Cash drawer per branch. `branch_id, opened_by_user_id, opened_at, opening_cash_usd, opening_cash_khr, closed_by_user_id, closed_at, expected_cash_usd, expected_cash_khr, counted_cash_usd, counted_cash_khr, difference_usd, difference_khr, note, status (open|closed)`. Only one open shift per branch (MySQL generated-column unique like sessions; app lock elsewhere).

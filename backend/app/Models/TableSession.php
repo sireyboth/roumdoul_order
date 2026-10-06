@@ -6,6 +6,7 @@ use App\Models\Concerns\BelongsToCompany;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 /** One visit: many orders, one bill. */
 class TableSession extends Model
@@ -36,6 +37,11 @@ class TableSession extends Model
     public function orders(): HasMany
     {
         return $this->hasMany(Order::class);
+    }
+
+    public function bill(): HasOne
+    {
+        return $this->hasOne(Bill::class);
     }
 
     public function serviceRequests(): HasMany

@@ -12,6 +12,7 @@ use App\Models\Order;
 use App\Models\TableSession;
 use App\Models\User;
 use App\Services\AuditLogger;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -100,7 +101,7 @@ class OrderPlacer
 
                 return $order->load('items');
             });
-        } catch (\Illuminate\Database\UniqueConstraintViolationException $e) {
+        } catch (UniqueConstraintViolationException $e) {
             // Two identical taps raced past the first check; the other one won.
             if ($idempotencyKey && ($existing = $this->existing($table, $idempotencyKey))) {
                 return $existing;
@@ -110,13 +111,20 @@ class OrderPlacer
         }
     }
 
-    private function existing(DiningTable $table, string $key): ?Order
+    /** Keys are unique per branch; a key reused from another table is refused, never returned. */
+    public static function existing(DiningTable $table, string $key): ?Order
     {
-        return Order::query()
-            ->where('dining_table_id', $table->id)
+        $order = Order::query()
+            ->where('branch_id', $table->branch_id)
             ->where('idempotency_key', $key)
             ->with('items')
             ->first();
+
+        if ($order && $order->dining_table_id !== $table->id) {
+            throw ValidationException::withMessages(['idempotency_key' => 'Please try sending your order again.']);
+        }
+
+        return $order;
     }
 
     /**

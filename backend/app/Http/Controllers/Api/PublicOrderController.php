@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Enums\OrderStatus;
 use App\Http\Controllers\Controller;
 use App\Models\DiningTable;
 use App\Models\Order;
@@ -41,10 +42,7 @@ class PublicOrderController extends Controller
             'items.*.note' => ['nullable', 'string', 'max:120'],
         ]);
 
-        $existed = Order::query()
-            ->where('dining_table_id', $table->id)
-            ->where('idempotency_key', $data['idempotency_key'])
-            ->exists();
+        $existed = OrderPlacer::existing($table, $data['idempotency_key']) !== null;
 
         $order = $placer->place($table, $data['items'], $data['note'] ?? null, $data['idempotency_key']);
 
@@ -71,7 +69,7 @@ class PublicOrderController extends Controller
 
         return response()->json(['data' => [
             'status' => $session->status,
-            'subtotal' => $orders->where('status', '!=', \App\Enums\OrderStatus::Cancelled)->sum('subtotal'),
+            'subtotal' => $orders->where('status', '!=', OrderStatus::Cancelled)->sum('subtotal'),
             'orders' => $orders->map(fn (Order $o) => OrderPresenter::order($o))->values(),
             'requests' => $requests->map(fn (ServiceRequest $r) => ['type' => $r->type, 'created_at' => $r->created_at?->toIso8601String()])->values(),
         ]])->header('Cache-Control', 'no-store');

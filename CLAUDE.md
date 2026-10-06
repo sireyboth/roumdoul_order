@@ -8,6 +8,7 @@ Read these before larger changes:
 - `docs/architecture.md`: how the parts connect and how data flows (order, menu, money)
 - `docs/database.md`: every table, column, index, plus the planned part B / Step 2 tables
 - `docs/roadmap.md`: what is done, what is next, the exact scope of the next task
+- `docs/step2-features.md`: how each Step 2 feature should work (upsell pop-up, combos, feedback, multi-language, kiosk, multi-branch, automatic KHQR, split bill)
 
 ## Stack
 

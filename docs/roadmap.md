@@ -39,7 +39,7 @@ Multi-tenant Filament back office, platform admin, plans & limits, self sign-up 
 
 Build in this order, each with tests and a browser run.
 
-### B1 – database fixes + bills & payments
+### B1 – database fixes + bills & payments ✅ done (8 Oct 2026; translatable names still wait for the owner)
 - Migration: change company/branch FKs on `orders`, `order_items`, `table_sessions` to `restrictOnDelete`.
 - Migration: `orders` unique `(dining_table_id, idempotency_key)` → `(branch_id, idempotency_key)`.
 - MySQL only: generated column + unique index for one open session per table (skip on SQLite).
@@ -68,4 +68,4 @@ Browser print, 80 mm layout: customer receipt (company, branch, items, totals, r
 Laravel Reverb + Echo in Next.js: channels `branch.{id}` (staff, private) and `table.{token-hash}` (customer). Keep polling as a fallback.
 
 ## Step 2 (after Step 1 is selling)
-Upsell, combos, feedback, multi-language, kiosk, multi-branch comparison, automatic KHQR, split bill by person.
+Upsell, combos, feedback, multi-language, kiosk, multi-branch comparison, automatic KHQR, split bill by person. Design for each: `docs/step2-features.md`.

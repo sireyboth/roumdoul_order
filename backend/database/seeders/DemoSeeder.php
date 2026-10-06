@@ -38,6 +38,9 @@ class DemoSeeder extends Seeder
 
         $company->update(['status' => CompanyStatus::Active, 'trial_ends_at' => null]);
 
+        // Manager PIN for approving discounts, voids and refunds on the cashier screen.
+        $company->memberships()->where('user_id', $owner->id)->update(['pin_hash' => bcrypt('1234')]);
+
         $branch = $company->branches()->first();
         $indoor = $branch->tableAreas()->create(['company_id' => $company->id, 'name' => 'Indoor', 'sort_order' => 1]);
         $terrace = $branch->tableAreas()->create(['company_id' => $company->id, 'name' => 'Terrace', 'sort_order' => 2]);
@@ -97,7 +100,7 @@ class DemoSeeder extends Seeder
             $company->memberships()->create(['user_id' => $user->id, 'role' => $role, 'is_active' => true]);
         }
 
-        $this->command?->info('Demo café ready. Owner login: owner@roumdoul.test / password');
+        $this->command?->info('Demo café ready. Owner login: owner@roumdoul.test / password (manager PIN 1234)');
         $this->command?->info('Staff screens (/staff): kitchen@, waiter@, cashier@roumdoul.test / password');
         $this->command?->info('Customer menu links (start the Next.js site first):');
 
