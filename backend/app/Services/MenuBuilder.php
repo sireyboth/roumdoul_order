@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\Branch;
 use App\Models\BranchMenuItem;
 use App\Models\Category;
 use App\Models\Company;
@@ -84,9 +85,7 @@ class MenuBuilder
         $company = $branch->company;
         $ids = $table->only(['name', 'table_area_id']);
 
-        $menuKey = sprintf('menu:%d:%d.%d', $branch->id, $company->menu_version, $branch->menu_version);
-
-        $menu = Cache::remember($menuKey, config('tok.menu_cache_ttl'), fn () => $this->buildMenu($company, $branch->id));
+        $menu = $this->branchMenu($branch);
 
         $areaName = $ids['table_area_id']
             ? $branch->tableAreas()->whereKey($ids['table_area_id'])->value('name')
@@ -115,6 +114,20 @@ class MenuBuilder
             'menu_version' => $company->menu_version.'.'.$branch->menu_version,
             'categories' => $menu,
         ];
+    }
+
+    /**
+     * The branch's categories and items, from cache. Also used by the waiter's
+     * "New order" screen, so staff and customers always see the same menu.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function branchMenu(Branch $branch): array
+    {
+        $company = $branch->company;
+        $menuKey = sprintf('menu:%d:%d.%d', $branch->id, $company->menu_version, $branch->menu_version);
+
+        return Cache::remember($menuKey, config('tok.menu_cache_ttl'), fn () => $this->buildMenu($company, $branch->id));
     }
 
     /** @return array<int, array<string, mixed>> */

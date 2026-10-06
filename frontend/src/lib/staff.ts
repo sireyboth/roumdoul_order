@@ -9,6 +9,8 @@ export type StaffSession = { token: string; user: { id: number; name: string }; 
 export type BoardItem = {
   name: Names;
   quantity: number;
+  unit_price: number;
+  line_total: number;
   options: Names[];
   note: string | null;
   station: "kitchen" | "bar";
@@ -25,12 +27,90 @@ export type BoardOrder = {
   placed_at: string;
   ready_at: string | null;
   served_at: string | null;
+  source: "qr" | "waiter";
   items: BoardItem[];
 };
 
 export type BoardRequest = { id: number; type: "waiter" | "bill"; table: string | null; created_at: string };
 
 export type Board = { server_time: string; orders: BoardOrder[]; requests: BoardRequest[] };
+
+export type CashierTable = {
+  id: number;
+  name: string;
+  area: string | null;
+  session: {
+    id: number;
+    status: "open" | "bill_requested";
+    opened_at: string;
+    bill_requested_at: string | null;
+    orders_count: number;
+    active_orders_count: number;
+    total: number;
+    paid_total: number;
+    bill: { id: number; number: number; status: "open" | "paid" | "void" } | null;
+  } | null;
+};
+
+export type CashierTables = { server_time: string; currency: "USD" | "KHR"; khr_per_usd: number; tables: CashierTable[] };
+
+export type BillOrder = Omit<BoardOrder, "status"> & {
+  status: BoardOrder["status"] | "completed" | "cancelled";
+  subtotal: number;
+  counts: boolean;
+  cancel_reason: string | null;
+};
+
+export type BillPayment = {
+  id: number;
+  method: "cash" | "khqr" | "card" | "other";
+  amount: number;
+  tendered_amount: number | null;
+  tendered_currency: "USD" | "KHR" | null;
+  change_amount: number;
+  change_currency: "USD" | "KHR" | null;
+  reference: string | null;
+  status: "confirmed" | "refunded";
+  received_by: string | null;
+  paid_at: string;
+  refund_reason: string | null;
+};
+
+export type BillDetail = {
+  id: number;
+  number: number;
+  status: "open" | "paid" | "void";
+  table: string | null;
+  area: string | null;
+  session_id: number;
+  currency: "USD" | "KHR";
+  khr_per_usd: number;
+  subtotal: number;
+  discount_total: number;
+  service_charge: number;
+  service_charge_bp: number;
+  vat: number;
+  vat_bp: number;
+  prices_include_vat: boolean;
+  vat_included: number;
+  total: number;
+  total_khr: number;
+  paid_total: number;
+  remaining: number;
+  remaining_khr: number;
+  opened_at: string;
+  paid_at: string | null;
+  void_reason: string | null;
+  orders: BillOrder[];
+  adjustments: { id: number; type: "percent" | "fixed"; value: number; amount: number; reason: string; approved_by: string | null }[];
+  payments: BillPayment[];
+};
+
+/** Roles that may use the cashier screen. */
+export const CASHIER_ROLES = ["owner", "manager", "cashier"];
+
+/** Roles that may type in an order for a table. */
+export const ORDER_ROLES = ["owner", "manager", "cashier", "waiter"];
 
 const KEY = "ro-staff-session";
 

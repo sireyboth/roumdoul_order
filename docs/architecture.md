@@ -50,13 +50,20 @@ Diagrams: the "Roumdoul Order System" page, https://claude.ai/artifact/XFXdQJczE
 
 Owner edits in Filament → model saved → `BumpsMenuVersion` increments `companies.menu_version` (company-wide changes) or `branches.menu_version` (branch settings) → next menu request uses a new cache key. New items/branches get `branch_menu_items` rows via `MenuSync`.
 
-## Flow 4 – money (part B, planned)
+## Flow 4 – money
 
-1. Customer requests bill or cashier opens the table → `bills` row (one per session): subtotal from non-cancelled orders, discounts, service charge, VAT, total, riel total, rate snapshot.
-2. Cashier takes one or more `payments` (cash with tendered + change in USD/KHR, KHQR with reference) inside an open `shifts` row.
-3. When `paid_total >= total`: bill `paid`, session `closed` (table free; old QR session ends).
-4. Queued job updates `daily_branch_sales` / `daily_item_sales` for the bill's business date.
-5. Shift close: expected cash (opening + cash payments − change ± movements) vs counted.
+1. Cashier screen (`/staff/cashier?branch=`) polls `GET /api/staff/branches/{id}/tables` every 4 s: every table with its open visit, amount so far (`BillService::preview`, nothing saved) and a "wants the bill" badge.
+2. Tapping a table → `POST /api/staff/sessions/{id}/bill` → `BillService::openFor()`: one `bills` row per visit (safe to repeat), daily receipt number, rates copied from the company. Totals come from `BillCalculator`: non-cancelled orders → discounts → service charge → VAT → riel rounded to 100៛. While open, every read recalculates (new orders can still arrive).
+3. Discount / void / refund: the manager types their PIN on the cashier screen (`ManagerPin`), a reason is required, both go to the audit log.
+4. `POST /api/staff/bills/{id}/payments` with an `idempotency_key`: cash (tendered + change in USD or KHR; riel compared with the rounded riel total) or KHQR / card (never more than due). Locks table → bill, so no order can join a visit that is being closed.
+5. When `paid_total >= total`: bill `paid`, session `closed` (table free; old QR session ends), served orders → completed, open calls cleared. Orders still cooking finish normally and complete when served.
+6. Customer phone: while a bill is open, "My orders" shows the real total; after payment the phone that took part in the visit shows "Paid, thank you" (the API only says the last visit was paid, never what was ordered).
+7. Waiter "New order" (`/staff/waiter/order?branch=`): same menu (`MenuBuilder::branchMenu`) and `OrderPlacer` as customers, with `placed_by_user_id` and source `waiter`.
+
+Still to come (B3–B5):
+- Payments inside an open `shifts` row (B3).
+- Queued job updates `daily_branch_sales` / `daily_item_sales` for the bill's business date.
+- Shift close: expected cash (opening + cash payments − change ± movements) vs counted.
 
 ## Status tracks
 

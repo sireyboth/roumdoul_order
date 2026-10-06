@@ -58,8 +58,7 @@ final class BillCalculator
         if ($pricesIncludeVat) {
             $vat = 0;
             $total = $taxable;
-            // The VAT already inside the total: total × rate / (1 + rate).
-            $vatIncluded = $vatBp > 0 ? (int) floor($taxable * $vatBp / (10000 + $vatBp) + 0.5) : 0;
+            $vatIncluded = self::includedVat($taxable, $vatBp);
         } else {
             $vat = self::percentOf($taxable, $vatBp);
             $total = $taxable + $vat;
@@ -76,6 +75,12 @@ final class BillCalculator
             total: $total,
             totalKhr: Money::toRiel($total, $currency, $khrPerUsd),
         );
+    }
+
+    /** The VAT already inside a VAT-inclusive amount: amount × rate / (1 + rate), halves rounded up. */
+    public static function includedVat(int $amount, int $vatBp): int
+    {
+        return $vatBp > 0 ? intdiv($amount * $vatBp * 2 + (10000 + $vatBp), 2 * (10000 + $vatBp)) : 0;
     }
 
     /** $amount × $bp / 10000, halves rounded up, using integers only. */

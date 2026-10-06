@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { loadSession, saveSession, staffApi, type StaffSession } from "@/lib/staff";
+import { CASHIER_ROLES, ORDER_ROLES, loadSession, saveSession, staffApi, type StaffSession } from "@/lib/staff";
 
 export default function StaffHome() {
   const [session, setSession] = useState<StaffSession | null>(null);
@@ -96,6 +96,12 @@ export default function StaffHome() {
             <Link href={`/staff/kitchen?branch=${branch.id}&station=kitchen`} className="rounded-xl bg-[var(--chip)] px-3 py-4 text-center font-medium">🍳 Kitchen</Link>
             <Link href={`/staff/kitchen?branch=${branch.id}&station=bar`} className="rounded-xl bg-[var(--chip)] px-3 py-4 text-center font-medium">☕ Bar</Link>
             <Link href={`/staff/waiter?branch=${branch.id}`} className="rounded-xl bg-[var(--chip)] px-3 py-4 text-center font-medium">🛎️ Waiter</Link>
+            {ORDER_ROLES.includes(branch.role) && (
+              <Link href={`/staff/waiter/order?branch=${branch.id}`} className="rounded-xl bg-[var(--chip)] px-3 py-4 text-center font-medium">📝 New order</Link>
+            )}
+            {CASHIER_ROLES.includes(branch.role) && (
+              <Link href={`/staff/cashier?branch=${branch.id}`} className="rounded-xl bg-[var(--brand)] px-3 py-4 text-center font-semibold text-white">💵 Cashier</Link>
+            )}
           </div>
         </section>
       ))}

@@ -104,5 +104,10 @@ class Order extends Model
             $reason,
             $this->company_id,
         );
+
+        // Paid before the food came (common in cafés): once served, the order is finished.
+        if ($next === OrderStatus::Served && $this->session?->status === 'closed') {
+            $this->moveTo(OrderStatus::Completed, $by);
+        }
     }
 }

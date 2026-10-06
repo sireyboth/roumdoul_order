@@ -10,6 +10,7 @@ import { pick, t } from "@/lib/i18n";
 import ItemSheet from "./item-sheet";
 import CartSheet from "./cart-sheet";
 import OrdersSheet from "./orders-sheet";
+import Sheet from "./sheet";
 
 function isSoldOut(item: MenuItem, now: number): boolean {
   return item.sold_out_until !== null && new Date(item.sold_out_until).getTime() > now;
@@ -46,29 +47,49 @@ export default function MenuApp({ menu, token }: { menu: TableMenu; token: strin
   const [sendError, setSendError] = useState<string | null>(null);
   const [calling, setCalling] = useState<"waiter" | "bill" | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  const [thanks, setThanks] = useState(false);
   // One key per cart submission: a retry after a dropped connection can never create a second order.
   const pendingKey = useRef<string | null>(null);
   const sectionRefs = useRef<Record<number, HTMLElement | null>>({});
   const cartKey = `tok-cart-${token}-${menu.menu_version.split(".")[0]}`;
+  // Remembers that this phone took part in the current visit, so only it says "Paid, thank you".
+  const visitKey = `tok-visit-${token}`;
 
   // Restore language and cart after the first render (server HTML has no access to storage).
   // Reading storage during render would make server and client HTML differ, so it happens once here.
+  // Saving waits until restoring is done, or the empty first render would overwrite what was saved.
+  const [restored, setRestored] = useState(false);
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setLang(readStorage<Lang>("tok-lang", "km"));
     setCart(readStorage<CartLine[]>(cartKey, []));
+    setRestored(true);
   }, [cartKey]);
 
-  useEffect(() => writeStorage(cartKey, cart), [cart, cartKey]);
-  useEffect(() => writeStorage("tok-lang", lang), [lang]);
+  useEffect(() => {
+    if (restored) writeStorage(cartKey, cart);
+  }, [cart, cartKey, restored]);
+  useEffect(() => {
+    if (restored) writeStorage("tok-lang", lang);
+  }, [lang, restored]);
 
   const refreshSession = useCallback(async () => {
     try {
-      setSession(await getSession(token));
+      const next = await getSession(token);
+      setSession(next);
+      if (next.status === "open" || next.status === "bill_requested") {
+        writeStorage(visitKey, true);
+      } else if (next.status === "none" && readStorage<boolean>(visitKey, false)) {
+        writeStorage(visitKey, false);
+        if (next.last_visit?.result === "paid") {
+          setOrdersOpen(false);
+          setThanks(true);
+        }
+      }
     } catch {
       /* keep the last known state; the next poll will try again */
     }
-  }, [token]);
+  }, [token, visitKey]);
 
   // Order status updates: check every 5 seconds while the page is open and visible.
   useEffect(() => {
@@ -349,6 +370,20 @@ export default function MenuApp({ menu, token }: { menu: TableMenu; token: strin
           onCall={call}
           onClose={() => setOrdersOpen(false)}
         />
+      )}
+
+      {thanks && (
+        <Sheet onClose={() => setThanks(false)} label={t("paidThanks", lang)}>
+          <div className="flex flex-col items-center gap-2 py-6 text-center">
+            <span className="grid size-16 place-items-center rounded-full bg-[var(--brand)] text-3xl text-white" aria-hidden>✓</span>
+            <h2 className="text-2xl font-semibold">{t("paidThanks", lang)}</h2>
+            <p className="text-[var(--muted)]">{t("seeYou", lang)}</p>
+            <p className="text-sm text-[var(--muted)]">{company.name}</p>
+          </div>
+          <button type="button" onClick={() => setThanks(false)} className="rounded-xl bg-[var(--brand)] px-4 py-3 font-semibold text-white">
+            {t("close", lang)}
+          </button>
+        </Sheet>
       )}
 
       {toast && (

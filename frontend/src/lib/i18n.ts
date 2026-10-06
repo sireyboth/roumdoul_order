@@ -41,6 +41,12 @@ const text = {
   tryAgain: { km: "មានបញ្ហា។ សូមព្យាយាមម្តងទៀត។", en: "Something went wrong. Please try again." },
   empty: { km: "មិនទាន់មានអ្វីនៅឡើយ", en: "Nothing added yet" },
   close: { km: "បិទ", en: "Close" },
+  paidThanks: { km: "បានបង់ប្រាក់ហើយ សូមអរគុណ!", en: "Paid, thank you!" },
+  seeYou: { km: "សង្ឃឹមថានឹងបានជួបលោកអ្នកម្តងទៀត។", en: "We hope to see you again soon." },
+  discount: { km: "បញ្ចុះតម្លៃ", en: "Discount" },
+  bill: { km: "វិក្កយបត្រ", en: "Bill" },
+  paid: { km: "បានបង់", en: "Paid" },
+  leftToPay: { km: "នៅសល់ត្រូវបង់", en: "Left to pay" },
 } satisfies Record<string, Record<Lang, string>>;
 
 export function t(key: keyof typeof text, lang: Lang): string {

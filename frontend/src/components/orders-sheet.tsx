@@ -89,10 +89,41 @@ export default function OrdersSheet({
         })}
       </ul>
 
-      <div className="flex justify-between border-t border-[var(--line)] pt-3 font-semibold tabular-nums">
-        <span>{t("visitTotal", lang)}</span>
-        <span>{formatMoney(session.subtotal, currency)}</span>
-      </div>
+      {session.bill ? (
+        <dl className="flex flex-col gap-1 border-t border-[var(--line)] pt-3 text-sm tabular-nums">
+          <div className="flex justify-between"><dt>{t("subtotal", lang)}</dt><dd>{formatMoney(session.subtotal, currency)}</dd></div>
+          {session.bill.discount_total > 0 && (
+            <div className="flex justify-between"><dt>{t("discount", lang)}</dt><dd>−{formatMoney(session.bill.discount_total, currency)}</dd></div>
+          )}
+          {session.bill.service_charge > 0 && (
+            <div className="flex justify-between"><dt>{t("service", lang)}</dt><dd>{formatMoney(session.bill.service_charge, currency)}</dd></div>
+          )}
+          {session.bill.vat > 0 && (
+            <div className="flex justify-between"><dt>{t("vat", lang)}</dt><dd>{formatMoney(session.bill.vat, currency)}</dd></div>
+          )}
+          <div className="flex justify-between text-base font-semibold">
+            <dt>{t("bill", lang)} #{session.bill.number}</dt>
+            <dd className="text-right">
+              {formatMoney(session.bill.total, currency)}
+              {currency === "USD" && <span className="block text-xs font-normal text-[var(--muted)]">{formatMoney(session.bill.total_khr, "KHR")}</span>}
+            </dd>
+          </div>
+          {session.bill.paid_total > 0 && (
+            <>
+              <div className="flex justify-between"><dt>{t("paid", lang)}</dt><dd>{formatMoney(session.bill.paid_total, currency)}</dd></div>
+              <div className="flex justify-between font-semibold">
+                <dt>{t("leftToPay", lang)}</dt>
+                <dd>{formatMoney(Math.max(0, session.bill.total - session.bill.paid_total), currency)}</dd>
+              </div>
+            </>
+          )}
+        </dl>
+      ) : (
+        <div className="flex justify-between border-t border-[var(--line)] pt-3 font-semibold tabular-nums">
+          <span>{t("visitTotal", lang)}</span>
+          <span>{formatMoney(session.subtotal, currency)}</span>
+        </div>
+      )}
 
       <div className="grid grid-cols-2 gap-2">
         <button

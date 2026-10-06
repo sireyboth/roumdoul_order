@@ -207,6 +207,21 @@ class BillingTest extends TestCase
         $this->assertNotSame($session->id, $next->table_session_id);
     }
 
+    public function test_order_served_after_paying_is_completed(): void
+    {
+        $bill = $this->openBill();
+        $this->pay($bill, ['method' => 'cash', 'tendered_amount' => 525, 'tendered_currency' => 'USD']);
+
+        $order = Order::query()->where('table_session_id', $bill->table_session_id)->firstOrFail();
+        $this->assertSame(OrderStatus::Placed, $order->status);
+
+        $order->moveTo(OrderStatus::Preparing);
+        $order->moveTo(OrderStatus::Ready);
+        $order->moveTo(OrderStatus::Served);
+
+        $this->assertSame(OrderStatus::Completed, $order->refresh()->status);
+    }
+
     public function test_cash_over_the_total_gives_change(): void
     {
         $bill = $this->openBill();

@@ -84,9 +84,23 @@ export type PlacedOrder = {
   items: PlacedOrderItem[];
 };
 
+export type TableBill = {
+  number: number;
+  total: number;
+  total_khr: number;
+  paid_total: number;
+  discount_total: number;
+  service_charge: number;
+  vat: number;
+};
+
 export type TableSessionState = {
   status: "none" | "open" | "bill_requested" | "closed";
   subtotal: number;
   orders: PlacedOrder[];
   requests: { type: "waiter" | "bill"; created_at: string }[];
+  /** Set once the cashier opens the bill: the real total with discounts, service charge and VAT. */
+  bill: TableBill | null;
+  /** When the table is free again: how the last visit ended (only "paid" is reported). */
+  last_visit: { result: "paid"; closed_at: string } | null;
 };

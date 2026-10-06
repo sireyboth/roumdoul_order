@@ -41,7 +41,7 @@ npm run dev                        :: http://localhost:3000
 npm run lint && npx tsc --noEmit   :: must stay clean
 ```
 
-Demo logins (password `password`): `owner@roumdoul.test` (/app), `admin@roumdoul.test` (/admin), `kitchen@`, `waiter@`, `cashier@roumdoul.test` (/staff).
+Demo logins (password `password`): `owner@roumdoul.test` (/app, manager PIN `1234`), `admin@roumdoul.test` (/admin), `kitchen@`, `waiter@`, `cashier@roumdoul.test` (/staff).
 
 ## How requests flow
 
@@ -66,17 +66,17 @@ Demo logins (password `password`): `owner@roumdoul.test` (/app), `admin@roumdoul
 ## Code layout (backend)
 
 - `app/Models` – Eloquent models. Concerns: `BelongsToCompany`, `BumpsMenuVersion`, `Auditable`.
-- `app/Services` – `MenuBuilder` (token → table, cached branch menu), `MenuSync` (branch × item rows), `CompanyProvisioner` (new restaurant), `AuditLogger`, `TelegramNotifier`, `Ordering/OrderPlacer|OrderPresenter|ServiceRequests`.
-- `app/Support` – `Money`, `QrCode`, `Tenant`, `TenantScope`, `StaffAccess`.
-- `app/Enums` – `OrderStatus`, `StaffRole`, `CompanyStatus`, `Station`.
-- `app/Http/Controllers/Api` – `PublicMenuController`, `PublicOrderController`, `StaffAuthController`, `StaffBoardController`.
+- `app/Services` – `MenuBuilder` (token → table, cached branch menu), `MenuSync` (branch × item rows), `CompanyProvisioner` (new restaurant), `AuditLogger`, `TelegramNotifier`, `Ordering/OrderPlacer|OrderPresenter|ServiceRequests`, `Billing/BillCalculator` (pure bill maths) `|BillService` (open, discount, pay, void, refund) `|BillPresenter`.
+- `app/Support` – `Money` (incl. riel rounding/conversion), `QrCode`, `Tenant`, `TenantScope`, `StaffAccess`, `ManagerPin` (owner/manager PIN approval, rate-limited).
+- `app/Enums` – `OrderStatus`, `StaffRole`, `CompanyStatus`, `Station`, `BillStatus`, `PaymentMethod`.
+- `app/Http/Controllers/Api` – `PublicMenuController`, `PublicOrderController`, `StaffAuthController`, `StaffBoardController`, `StaffCashierController` (cashier tables/bills/payments + waiter orders).
 - `app/Filament/App/Resources` – Branches (+ Areas, Menu availability relation managers), DiningTables (QR, add many), Categories, MenuItems, OptionGroups, Staff, Orders.
 - `routes/api.php` – public (`throttle:public-read|public-write`, limited per token) and staff (`auth:sanctum`).
 
 ## Code layout (frontend)
 
 - `src/app/t/[token]/page.tsx` – customer menu (server) → `components/menu-app.tsx` (client: cart, send order, tracking, call waiter).
-- `src/app/staff/*` – sign-in + `kitchen` (columns New/Preparing/Ready, timers, chime) + `waiter` (calls, ready to serve, sold-out).
+- `src/app/staff/*` – sign-in + `kitchen` (columns New/Preparing/Ready, timers, chime) + `waiter` (calls, ready to serve, sold-out) + `waiter/order` (new order for a table, reuses `ItemSheet`) + `cashier` (tables grid → bill sheet → `pay-panel`, `pin-form`).
 - `src/app/api/t/...` and `src/app/api/staff/...` – proxies to Laravel (`lib/backend.ts`).
 - `src/lib` – `types.ts`, `money.ts`, `i18n.ts` (Khmer/English strings), `table-api.ts`, `staff.ts`.
 - Next.js 16: `params`/`searchParams` are Promises; use `PageProps<'/route'>` / `RouteContext<'/route'>` types. Read `node_modules/next/dist/docs` when unsure (see `frontend/AGENTS.md`).
