@@ -15,5 +15,10 @@ return Application::configure(basePath: dirname(__DIR__))
         //
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        //
+        // API screens show this text to staff and customers: no "No query results for model [...]".
+        $exceptions->render(function (\Symfony\Component\HttpKernel\Exception\NotFoundHttpException $e, \Illuminate\Http\Request $request) {
+            if ($request->is('api/*')) {
+                return response()->json(['message' => 'Not found. It may have been removed, or the link is wrong. Please go back and try again.'], 404);
+            }
+        });
     })->create();
