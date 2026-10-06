@@ -155,6 +155,11 @@ class BillService
 
             $this->recalculate($bill);
 
+            // Money already taken cannot be discounted away: refund first.
+            if ($bill->paid_total > $bill->total) {
+                throw ValidationException::withMessages(['value' => 'This discount is more than what is left to pay. Refund a payment first.']);
+            }
+
             AuditLogger::record('bill.discount_added', $bill, [
                 'type' => $type,
                 'value' => $value,
@@ -162,6 +167,11 @@ class BillService
                 'approved_by' => $approver->id,
                 'total' => $bill->total,
             ], reason: $reason, companyId: $bill->company_id);
+
+            // Fully covered now (part paid, or a 100% comp): the bill is done.
+            if ($bill->subtotal > 0 && $bill->paid_total >= $bill->total) {
+                $this->settle($bill, $by);
+            }
 
             return $adjustment->fresh();
         });
@@ -223,6 +233,12 @@ class BillService
         try {
             return DB::transaction(function () use ($bill, $input, $by, $key, $method, $reference) {
                 DiningTable::query()->whereKey($bill->session()->value('dining_table_id'))->lockForUpdate()->first();
+
+                // A double tap that waited for the lock: the first request may have just settled the bill.
+                if ($existing = $this->existingPayment($bill, $key)) {
+                    return $existing;
+                }
+
                 $bill = $this->lockOpenBill($bill);
                 $this->recalculate($bill);
 
@@ -484,7 +500,7 @@ class BillService
 
         $change = match (true) {
             $excess === 0 || $changeCurrency === $tenderedCurrency => $excess,
-            $changeCurrency === 'KHR' => Money::roundRiel($excess * $rate / 100), // dollars over, change in riel
+            $changeCurrency === 'KHR' => intdiv($excess * $rate, 10000) * 100, // dollars over, change in riel, down to 100៛
             default => intdiv($excess * 100, $rate), // riel over, change in dollars
         };
 

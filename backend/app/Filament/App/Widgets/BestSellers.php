@@ -32,10 +32,13 @@ class BestSellers extends TableWidget
                     ->where('company_id', $company?->id ?? 0)
                     ->whereDate('business_date', '>=', Carbon::parse($today)->subDays(6)->toDateString())
                     ->whereDate('business_date', '<=', $today)
-                    ->selectRaw('MIN(id) as id, menu_item_id, MAX(name_en) as name_en, MAX(name_km) as name_km, SUM(quantity) as quantity, SUM(amount) as amount')
-                    ->groupBy('menu_item_id')
+                    ->selectRaw('MIN(id) as id, menu_item_id, name_en, MAX(name_km) as name_km, SUM(quantity) as quantity, SUM(amount) as amount')
+                    // Deleted items (no menu_item_id) stay apart by name.
+                    ->groupBy('menu_item_id', 'name_en')
             )
             ->defaultSort('quantity', 'desc')
+            // Filament adds "ORDER BY daily_item_sales.id" by default, which MySQL 8 rejects on a grouped query.
+            ->defaultKeySort(false)
             ->paginated([10])
             ->columns([
                 TextColumn::make('name_en')->label('Item')->description(fn ($record) => $record->name_km)->weight('bold'),

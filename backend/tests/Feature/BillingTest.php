@@ -224,6 +224,56 @@ class BillingTest extends TestCase
         $this->assertSame(OrderStatus::Completed, $order->refresh()->status);
     }
 
+    public function test_discount_cannot_take_back_money_already_paid_and_a_covered_bill_settles(): void
+    {
+        $bill = $this->openBill(); // $5.25
+        $this->pay($bill, ['method' => 'khqr', 'amount' => 400]);
+
+        // 30% off would make the bill $3.68, less than the $4.00 already paid.
+        $this->assertRejected(fn () => $this->bills->addDiscount($bill, 'percent', 3000, 'Birthday', '1234', $this->cashier), 'value');
+        $this->assertSame(525, $bill->refresh()->total);
+
+        // $1.25 off covers exactly what is left: the bill is paid and the table is free.
+        $this->bills->addDiscount($bill, 'fixed', 125, 'Late food', '1234', $this->cashier);
+        $this->assertSame(BillStatus::Paid, $bill->refresh()->status);
+        $this->assertSame('closed', $bill->session->status);
+    }
+
+    public function test_full_comp_closes_the_bill_as_paid(): void
+    {
+        $bill = $this->openBill();
+        $this->bills->addDiscount($bill, 'percent', 10000, 'On the house', '1234', $this->cashier);
+
+        $bill->refresh();
+        $this->assertSame(0, $bill->total);
+        $this->assertSame(BillStatus::Paid, $bill->status);
+        $this->assertSame(525, $bill->discount_total);
+    }
+
+    public function test_orders_cannot_be_cancelled_once_their_bill_holds_money(): void
+    {
+        $bill = $this->openBill();
+        $order = Order::query()->where('table_session_id', $bill->table_session_id)->firstOrFail();
+        $payment = $this->pay($bill, ['method' => 'khqr', 'amount' => 100]);
+
+        $this->assertRejected(fn () => $order->moveTo(OrderStatus::Cancelled, $this->cashier, 'Wrong item'), 'status');
+
+        $this->bills->refund($payment, 'Wrong item', '1234', $this->cashier);
+        $order->refresh()->moveTo(OrderStatus::Cancelled, $this->cashier, 'Wrong item');
+        $this->assertSame(OrderStatus::Cancelled, $order->status);
+
+        // Paid in full: the sale is closed, so cancelling needs a refund too.
+        $other = $this->company->diningTables()->where('name', 'T2')->firstOrFail();
+        $bill2 = $this->bills->openFor($this->placeOrder($other)->session, $this->cashier);
+        $paid = $this->pay($bill2, ['method' => 'cash', 'tendered_amount' => 525, 'tendered_currency' => 'USD']);
+        $order2 = Order::query()->where('table_session_id', $bill2->table_session_id)->firstOrFail();
+        $this->assertRejected(fn () => $order2->moveTo(OrderStatus::Cancelled, $this->cashier, 'Cold'), 'status');
+
+        $this->bills->refund($paid, 'Cold food', '1234', $this->cashier);
+        $order2->refresh()->moveTo(OrderStatus::Cancelled, $this->cashier, 'Cold');
+        $this->assertSame(OrderStatus::Cancelled, $order2->status);
+    }
+
     public function test_cash_over_the_total_gives_change(): void
     {
         $bill = $this->openBill();
@@ -245,11 +295,11 @@ class BillingTest extends TestCase
         $this->assertSame(0, $payment->change_amount);
         $this->assertSame(BillStatus::Paid, $bill->refresh()->status);
 
-        // Dollars handed over, change in riel: $10 for $5.25 → $4.75 = 19,475៛ → 19,500៛
+        // Dollars handed over, change in riel: $10 for $5.25 → $4.75 = 19,475៛ → 19,400៛ (rounded down, the till never gives away the difference)
         $other = $this->company->diningTables()->where('name', 'T2')->firstOrFail();
         $bill2 = $this->bills->openFor($this->placeOrder($other)->session, $this->cashier);
         $payment2 = $this->pay($bill2, ['method' => 'cash', 'tendered_amount' => 1000, 'tendered_currency' => 'USD', 'change_currency' => 'KHR']);
-        $this->assertSame(19500, $payment2->change_amount);
+        $this->assertSame(19400, $payment2->change_amount);
         $this->assertSame('KHR', $payment2->change_currency);
         $this->assertSame(2, $bill2->number);
     }

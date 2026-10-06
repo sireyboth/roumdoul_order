@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\BillStatus;
 use App\Enums\OrderStatus;
 use App\Models\Concerns\BelongsToCompany;
 use App\Services\AuditLogger;
@@ -80,6 +81,17 @@ class Order extends Model
 
         if ($next === OrderStatus::Cancelled && blank($reason)) {
             throw ValidationException::withMessages(['reason' => 'Please give a reason for cancelling.']);
+        }
+
+        // Once money has been taken for this visit, the bill is the record: refund first, then cancel.
+        // (Open bill with a part payment, or a paid bill not refunded. A void bill holds no money.)
+        $bill = $next === OrderStatus::Cancelled ? $this->session?->bill : null;
+        $holdsMoney = $bill && ($bill->isOpen() ? $bill->paid_total > 0 : $bill->status === BillStatus::Paid && $bill->paid_total >= $bill->total);
+
+        if ($holdsMoney) {
+            throw ValidationException::withMessages([
+                'status' => "Order #{$this->number} is on bill #{$bill->number}, which has payments. Refund the payment first, then cancel.",
+            ]);
         }
 
         $before = $this->status->value;

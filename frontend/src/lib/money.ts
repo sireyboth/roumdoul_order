@@ -54,7 +54,7 @@ export function cashPreview(
       excess === 0 || changeCurrency === tenderedCurrency
         ? excess
         : changeCurrency === "KHR"
-          ? roundRiel((excess * rate) / 100)
+          ? Math.floor((excess * rate) / 10000) * 100 // riel change rounds down to 100៛, like the server
           : Math.floor((excess * 100) / rate);
     return { applied: due, change, dueInTendered };
   }
