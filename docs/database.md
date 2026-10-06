@@ -515,7 +515,7 @@ A bill can have several (part cash, part KHQR). Never deleted; a mistake is refu
 | `company_id` | integer |  |  | companies.id (restrict) |
 | `branch_id` | integer |  |  | branches.id (restrict) |
 | `bill_id` | integer |  |  | bills.id (restrict) |
-| `shift_id` | integer | yes |  | cash drawer shift (B3) |
+| `shift_id` | integer | yes |  | shifts.id (restrict), set by the server: the open shift |
 | `idempotency_key` | varchar |  |  | retry returns the same payment |
 | `method` | varchar |  |  | cash, khqr, card, other |
 | `amount` | integer |  |  | applied to the bill, bill currency |
@@ -532,23 +532,66 @@ A bill can have several (part cash, part KHQR). Never deleted; a mistake is refu
 | `refund_reason` | varchar | yes |  |  |
 | `refunded_by_user_id` | integer | yes |  | users.id (set null) |
 | `refunded_at` | datetime | yes |  |  |
+| `refunded_in_shift_id` | integer | yes |  | shifts.id (restrict): the drawer a cash refund came out of |
 | `created_at` / `updated_at` | datetime | yes |  |  |
 
 Indexes: `UNIQUE (branch_id, idempotency_key)`, `UNIQUE (branch_id, reference)`, `(bill_id)`, `(shift_id, method)`, `(branch_id, business_date)`
 
 Cash rules: riel handed over is compared with the due amount rounded to 100៛, so paying exactly the riel total settles the bill; a smaller amount credits only what was given (rounded down). KHQR / card / other can never pay more than is due; only cash gives change.
 
+## Shifts (Step 1 part B, B3)
+
+All changes go through `AppServicesBillingShiftService`. Every payment needs an open shift at its branch (the server sets `payments.shift_id`; the screen never sends it). Cash is counted separately in dollars and riel.
+
+Expected cash, per currency = opening + cash handed over − change given (payments of this shift) + cash in − cash out − cash refunded in this shift (handed back, net of the change given then).
+
+### `shifts`
+
+One cash drawer session at a branch. MySQL only: generated column `open_branch_id = IF(status = open, branch_id, NULL)` with a unique index, so a branch can never have two open shifts (the app also locks the branch row).
+
+| Column | Type | Null | Default | References |
+|---|---|---|---|---|
+| `id` | integer |  |  |  |
+| `company_id` | integer |  |  | companies.id (restrict) |
+| `branch_id` | integer |  |  | branches.id (restrict) |
+| `status` | varchar |  | open | open, closed |
+| `opened_by_user_id` | integer | yes |  | users.id (set null) |
+| `opened_at` | datetime |  |  |  |
+| `opening_cash_usd` | integer |  | 0 | cents |
+| `opening_cash_khr` | integer |  | 0 | riel |
+| `closed_by_user_id` | integer | yes |  | users.id (set null) |
+| `closed_at` | datetime | yes |  |  |
+| `expected_cash_usd` / `expected_cash_khr` | integer | yes |  | worked out at close |
+| `counted_cash_usd` / `counted_cash_khr` | integer | yes |  | typed by the cashier (blind count) |
+| `difference_usd` / `difference_khr` | integer | yes |  | counted − expected (negative = short) |
+| `note` | varchar | yes |  |  |
+| `created_at` / `updated_at` | datetime | yes |  |  |
+
+Indexes: `(branch_id, status)`, `(company_id, opened_at)`, MySQL `UNIQUE (open_branch_id)`
+
+### `cash_movements`
+
+Cash put into or taken out of the drawer that is not a sale (change float, paying a supplier). Reason required.
+
+| Column | Type | Null | Default | References |
+|---|---|---|---|---|
+| `id` | integer |  |  |  |
+| `company_id` | integer |  |  | companies.id (restrict) |
+| `shift_id` | integer |  |  | shifts.id (restrict) |
+| `type` | varchar |  |  | in, out |
+| `amount` | integer |  |  | cents or riel, see `currency` |
+| `currency` | char(3) |  |  | USD, KHR |
+| `reason` | varchar |  |  |  |
+| `user_id` | integer | yes |  | users.id (set null) |
+| `created_at` / `updated_at` | datetime | yes |  |  |
+
+Indexes: `(shift_id)`
+
 ## Planned for Step 1 part B
 
 ### Still awaiting the owner
 
 **Translatable names (proposed fix #6):** replace `name_km` / `name_en` / `name_zh` (and `description_*`) on `categories`, `menu_items`, `option_groups`, `options` with JSON `name` / `description` (`{"km","en","zh",...}`) and add `companies.languages` JSON. Chinese is missing on options today; JSON lets a restaurant add any language without a schema change. Order item snapshots would then store the JSON too. Not built until the owner decides.
-
-### `shifts`
-Cash drawer per branch. `branch_id, opened_by_user_id, opened_at, opening_cash_usd, opening_cash_khr, closed_by_user_id, closed_at, expected_cash_usd, expected_cash_khr, counted_cash_usd, counted_cash_khr, difference_usd, difference_khr, note, status (open|closed)`. Only one open shift per branch (MySQL generated-column unique like sessions; app lock elsewhere).
-
-### `cash_movements`
-`shift_id, type (in|out), amount, currency, reason, user_id`. Paying a supplier from the drawer, adding change.
 
 ### `daily_branch_sales` (report copy)
 UNIQUE `(branch_id, business_date)`: `orders_count, bills_count, items_count, cancelled_count, gross, discounts, service_charge, vat, net, refunds, cash, khqr, card, other`. Updated by a queued job after payment / refund / void; `php artisan reports:rebuild {date}` recomputes from raw rows.

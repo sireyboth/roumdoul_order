@@ -2,12 +2,13 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { SignedOut, since, staffApi, type BillDetail, type CashierTable, type CashierTables } from "@/lib/staff";
+import { SignedOut, since, staffApi, type BillDetail, type CashierTable, type CashierTables, type ShiftState } from "@/lib/staff";
 import { newKey } from "@/lib/table-api";
 import { formatMoney } from "@/lib/money";
 import Sheet from "../sheet";
 import PayPanel from "./pay-panel";
 import PinForm from "./pin-form";
+import ShiftSheet from "./shift-sheet";
 
 /** Tables with what they owe; tap one to open its bill and take payment. */
 export default function CashierBoard({ branchId }: { branchId: number }) {
@@ -16,7 +17,17 @@ export default function CashierBoard({ branchId }: { branchId: number }) {
   const [signedOut, setSignedOut] = useState(false);
   const [now, setNow] = useState(() => Date.now());
   const [selected, setSelected] = useState<CashierTable | null>(null);
+  const [shift, setShift] = useState<ShiftState | null>(null);
+  const [shiftOpen, setShiftOpen] = useState(false);
   const busy = useRef(false);
+
+  const refreshShift = useCallback(async () => {
+    try {
+      setShift(await staffApi<ShiftState>(`branches/${branchId}/shift`));
+    } catch (e) {
+      if (e instanceof SignedOut) setSignedOut(true);
+    }
+  }, [branchId]);
 
   const refresh = useCallback(async () => {
     if (busy.current) return;
@@ -33,15 +44,20 @@ export default function CashierBoard({ branchId }: { branchId: number }) {
   }, [branchId]);
 
   useEffect(() => {
-    const first = window.setTimeout(() => void refresh(), 0);
+    const first = window.setTimeout(() => {
+      void refresh();
+      void refreshShift();
+    }, 0);
     const poll = window.setInterval(() => void refresh(), 4000);
+    const shiftPoll = window.setInterval(() => void refreshShift(), 20_000);
     const tick = window.setInterval(() => setNow(Date.now()), 30_000);
     return () => {
       window.clearTimeout(first);
       window.clearInterval(poll);
+      window.clearInterval(shiftPoll);
       window.clearInterval(tick);
     };
-  }, [refresh]);
+  }, [refresh, refreshShift]);
 
   if (signedOut) {
     return (
@@ -65,7 +81,24 @@ export default function CashierBoard({ branchId }: { branchId: number }) {
           {busyTables.length} busy
           {billRequested > 0 && <span className="ml-2 rounded-full bg-amber-300 px-2 py-0.5 font-semibold text-black">{billRequested} want the bill</span>}
         </p>
+        {shift && (
+          <button
+            type="button"
+            onClick={() => setShiftOpen(true)}
+            className={`rounded-full px-3 py-1.5 text-sm font-semibold ${shift.shift ? "border border-[var(--line)]" : "bg-[var(--danger)] text-white"}`}
+          >
+            {shift.shift
+              ? `🗄️ Shift open since ${new Date(shift.shift.opened_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`
+              : "🗄️ Start shift"}
+          </button>
+        )}
       </header>
+
+      {shift && !shift.shift && (
+        <p className="rounded-lg bg-[var(--danger-bg)] p-3 text-sm text-[var(--danger)]">
+          No shift is open. Count the cash drawer and tap <strong>Start shift</strong> before taking payments.
+        </p>
+      )}
 
       {error && <p role="alert" className="rounded-lg bg-[var(--danger-bg)] p-3 text-sm text-[var(--danger)]">{error}</p>}
 
@@ -121,11 +154,25 @@ export default function CashierBoard({ branchId }: { branchId: number }) {
           key={selected.session.id}
           sessionId={selected.session.id}
           tableName={selected.name}
-          onChanged={refresh}
+          shiftOpen={Boolean(shift?.shift)}
+          onStartShift={() => setShiftOpen(true)}
+          onChanged={async () => {
+            await refresh();
+            await refreshShift();
+          }}
           onClose={() => {
             setSelected(null);
             void refresh();
           }}
+        />
+      )}
+      {shiftOpen && shift && (
+        <ShiftSheet
+          branchId={branchId}
+          state={shift}
+          currency={data?.currency ?? "USD"}
+          onChanged={refreshShift}
+          onClose={() => setShiftOpen(false)}
         />
       )}
     </main>
@@ -134,7 +181,21 @@ export default function CashierBoard({ branchId }: { branchId: number }) {
 
 type Panel = "pay" | "discount" | "void" | { refund: number } | { removeDiscount: number };
 
-function BillSheet({ sessionId, tableName, onChanged, onClose }: { sessionId: number; tableName: string; onChanged: () => Promise<void>; onClose: () => void }) {
+function BillSheet({
+  sessionId,
+  tableName,
+  shiftOpen,
+  onStartShift,
+  onChanged,
+  onClose,
+}: {
+  sessionId: number;
+  tableName: string;
+  shiftOpen: boolean;
+  onStartShift: () => void;
+  onChanged: () => Promise<void>;
+  onClose: () => void;
+}) {
   const [bill, setBill] = useState<BillDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [panel, setPanel] = useState<Panel>("pay");
@@ -289,7 +350,14 @@ function BillSheet({ sessionId, tableName, onChanged, onClose }: { sessionId: nu
 
           {bill.status === "open" && (
             <>
-              {panel === "pay" && bill.remaining > 0 && (
+              {panel === "pay" && bill.remaining > 0 && !shiftOpen && (
+                <button type="button" onClick={() => { onClose(); onStartShift(); }}
+                  className="rounded-xl bg-[var(--danger)] px-4 py-3 font-semibold text-white">
+                  Start a shift to take payment
+                </button>
+              )}
+
+              {panel === "pay" && bill.remaining > 0 && shiftOpen && (
                 <PayPanel
                   bill={bill}
                   onPay={async (body) => {

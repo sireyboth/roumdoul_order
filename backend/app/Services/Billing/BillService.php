@@ -12,6 +12,7 @@ use App\Models\DiningTable;
 use App\Models\Order;
 use App\Models\Payment;
 use App\Models\ServiceRequest;
+use App\Models\Shift;
 use App\Models\TableSession;
 use App\Models\User;
 use App\Services\AuditLogger;
@@ -200,7 +201,7 @@ class BillService
      * The same `idempotency_key` sent twice returns the first payment.
      *
      * @param  array{idempotency_key:string, method:string, amount?:int|null, tendered_amount?:int|null,
-     *     tendered_currency?:string|null, change_currency?:string|null, reference?:string|null, shift_id?:int|null}  $input
+     *     tendered_currency?:string|null, change_currency?:string|null, reference?:string|null}  $input
      */
     public function addPayment(Bill $bill, array $input, User $by): Payment
     {
@@ -230,6 +231,14 @@ class BillService
                     throw ValidationException::withMessages(['amount' => 'This bill has nothing left to pay.']);
                 }
 
+                // Every payment belongs to the open cash drawer shift (locked so it cannot close meanwhile).
+                $shift = Shift::query()
+                    ->where('branch_id', $bill->branch_id)
+                    ->where('status', 'open')
+                    ->lockForUpdate()
+                    ->first()
+                    ?? throw ValidationException::withMessages(['shift' => 'Start a shift (count the cash drawer) before taking payments.']);
+
                 if ($reference && Payment::query()->where('branch_id', $bill->branch_id)->where('reference', $reference)->exists()) {
                     throw ValidationException::withMessages(['reference' => 'This KHQR reference was already used for another payment.']);
                 }
@@ -244,7 +253,7 @@ class BillService
                     'company_id' => $bill->company_id,
                     'branch_id' => $bill->branch_id,
                     'bill_id' => $bill->id,
-                    'shift_id' => $input['shift_id'] ?? null,
+                    'shift_id' => $shift->id,
                     'idempotency_key' => $key,
                     'method' => $method,
                     'amount' => $money['amount'],
@@ -340,11 +349,19 @@ class BillService
                 throw ValidationException::withMessages(['payment' => 'This payment was already refunded.']);
             }
 
+            // Cash handed back comes out of the drawer that is open now.
+            $shift = Shift::query()->where('branch_id', $payment->branch_id)->where('status', 'open')->lockForUpdate()->first();
+
+            if (! $shift && $payment->method === PaymentMethod::Cash) {
+                throw ValidationException::withMessages(['shift' => 'Start a shift before giving cash back.']);
+            }
+
             $payment->update([
                 'status' => 'refunded',
                 'refund_reason' => mb_substr(trim($reason), 0, 255),
                 'refunded_by_user_id' => $by->id,
                 'refunded_at' => now(),
+                'refunded_in_shift_id' => $shift?->id,
             ]);
 
             $bill->update(['paid_total' => max(0, $bill->paid_total - $payment->amount)]);

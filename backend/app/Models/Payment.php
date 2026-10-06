@@ -16,7 +16,7 @@ class Payment extends Model
         'company_id', 'branch_id', 'bill_id', 'shift_id', 'idempotency_key', 'method', 'amount',
         'tendered_amount', 'tendered_currency', 'change_amount', 'change_currency', 'khr_per_usd',
         'reference', 'status', 'received_by_user_id', 'paid_at', 'business_date', 'refund_reason',
-        'refunded_by_user_id', 'refunded_at',
+        'refunded_by_user_id', 'refunded_at', 'refunded_in_shift_id',
     ];
 
     protected function casts(): array
@@ -41,6 +41,11 @@ class Payment extends Model
     public function branch(): BelongsTo
     {
         return $this->belongsTo(Branch::class);
+    }
+
+    public function shift(): BelongsTo
+    {
+        return $this->belongsTo(Shift::class);
     }
 
     public function receivedBy(): BelongsTo

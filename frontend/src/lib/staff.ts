@@ -106,6 +106,43 @@ export type BillDetail = {
   payments: BillPayment[];
 };
 
+export type ShiftSummary = {
+  expected_usd: number;
+  expected_khr: number;
+  opening_usd: number;
+  opening_khr: number;
+  cash_received_usd: number;
+  cash_received_khr: number;
+  change_given_usd: number;
+  change_given_khr: number;
+  cash_in_usd: number;
+  cash_in_khr: number;
+  cash_out_usd: number;
+  cash_out_khr: number;
+  refunded_usd: number;
+  refunded_khr: number;
+  by_method: Record<string, { count: number; amount: number }>;
+  refunds_count: number;
+};
+
+export type Shift = {
+  id: number;
+  status: "open" | "closed";
+  opened_at: string;
+  opened_by: string | null;
+  closed_at: string | null;
+  closed_by: string | null;
+  note: string | null;
+  summary: ShiftSummary;
+  counted_usd: number | null;
+  counted_khr: number | null;
+  difference_usd: number | null;
+  difference_khr: number | null;
+  movements: { id: number; type: "in" | "out"; amount: number; currency: "USD" | "KHR"; reason: string; user: string | null; at: string }[];
+};
+
+export type ShiftState = { shift: Shift | null; last_closed: Shift | null };
+
 /** Roles that may use the cashier screen. */
 export const CASHIER_ROLES = ["owner", "manager", "cashier"];
 

@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\PublicOrderController;
 use App\Http\Controllers\Api\StaffAuthController;
 use App\Http\Controllers\Api\StaffBoardController;
 use App\Http\Controllers\Api\StaffCashierController;
+use App\Http\Controllers\Api\StaffShiftController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/health', fn () => ['ok' => true]);
@@ -41,6 +42,12 @@ Route::prefix('staff')->group(function () {
         Route::post('/bills/{bill}/payments', [StaffCashierController::class, 'pay']);
         Route::post('/bills/{bill}/void', [StaffCashierController::class, 'void']);
         Route::post('/payments/{payment}/refund', [StaffCashierController::class, 'refund']);
+
+        // Cash drawer shifts (B3)
+        Route::get('/branches/{branch}/shift', [StaffShiftController::class, 'current']);
+        Route::post('/branches/{branch}/shift', [StaffShiftController::class, 'open']);
+        Route::post('/shifts/{shift}/movements', [StaffShiftController::class, 'movement']);
+        Route::post('/shifts/{shift}/close', [StaffShiftController::class, 'close']);
 
         // Waiter takes an order for a table (B2)
         Route::get('/branches/{branch}/order-menu', [StaffCashierController::class, 'orderMenu']);

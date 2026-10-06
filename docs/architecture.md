@@ -60,10 +60,9 @@ Owner edits in Filament → model saved → `BumpsMenuVersion` increments `compa
 6. Customer phone: while a bill is open, "My orders" shows the real total; after payment the phone that took part in the visit shows "Paid, thank you" (the API only says the last visit was paid, never what was ordered).
 7. Waiter "New order" (`/staff/waiter/order?branch=`): same menu (`MenuBuilder::branchMenu`) and `OrderPlacer` as customers, with `placed_by_user_id` and source `waiter`.
 
-Still to come (B3–B5):
-- Payments inside an open `shifts` row (B3).
-- Queued job updates `daily_branch_sales` / `daily_item_sales` for the bill's business date.
-- Shift close: expected cash (opening + cash payments − change ± movements) vs counted.
+8. Shifts (B3): the cashier starts a shift by counting the drawer (dollars and riel). Payments are refused without an open shift; the server attaches each payment to it. Cash in / out needs a reason. Closing is a blind count: expected cash (opening + cash received − change ± cash in/out − cash refunds) vs counted, difference saved and shown in the back office (Restaurant → Shifts).
+
+Still to come (B5): queued job updates `daily_branch_sales` / `daily_item_sales` for the bill's business date.
 
 ## Status tracks
 

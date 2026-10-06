@@ -3,12 +3,17 @@
 namespace Tests\Feature;
 
 use App\Enums\StaffRole;
+use App\Filament\App\Resources\Orders\Pages\ViewOrder;
 use App\Models\Company;
+use App\Models\MenuItem;
 use App\Models\User;
+use App\Services\Billing\ShiftService;
 use App\Services\CompanyProvisioner;
+use App\Services\Ordering\OrderPlacer;
 use Database\Seeders\DatabaseSeeder;
 use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Livewire\Livewire;
 use Tests\TestCase;
 
 class BackOfficeAccessTest extends TestCase
@@ -32,7 +37,7 @@ class BackOfficeAccessTest extends TestCase
     {
         $this->actingAs($this->owner);
 
-        foreach (['', '/branches', '/dining-tables', '/categories', '/menu-items', '/option-groups', '/staff', '/orders', '/profile'] as $path) {
+        foreach (['', '/branches', '/dining-tables', '/categories', '/menu-items', '/option-groups', '/staff', '/orders', '/shifts', '/profile'] as $path) {
             $this->get('/app/demo-cafe'.$path)->assertOk();
         }
     }
@@ -49,20 +54,40 @@ class BackOfficeAccessTest extends TestCase
     public function test_order_page_shows_and_cancels_with_reason(): void
     {
         $table = $this->company->diningTables()->firstOrFail();
-        $rice = \App\Models\MenuItem::query()->where('name_en', 'Khmer rice noodles')->firstOrFail();
-        $order = app(\App\Services\Ordering\OrderPlacer::class)->place($table, [['menu_item_id' => $rice->id, 'quantity' => 2]]);
+        $rice = MenuItem::query()->where('name_en', 'Khmer rice noodles')->firstOrFail();
+        $order = app(OrderPlacer::class)->place($table, [['menu_item_id' => $rice->id, 'quantity' => 2]]);
 
         $this->actingAs($this->owner)->get("/app/demo-cafe/orders/{$order->id}")->assertOk()->assertSee('Khmer rice noodles');
 
-        \Filament\Facades\Filament::setCurrentPanel('app');
-        \Filament\Facades\Filament::setTenant($this->company);
+        Filament::setCurrentPanel('app');
+        Filament::setTenant($this->company);
 
-        \Livewire\Livewire::test(\App\Filament\App\Resources\Orders\Pages\ViewOrder::class, ['record' => $order->id])
+        Livewire::test(ViewOrder::class, ['record' => $order->id])
             ->callAction('cancel', ['reason' => 'Kitchen ran out'])
             ->assertHasNoActionErrors();
 
         $this->assertSame('cancelled', $order->fresh()->status->value);
         $this->assertSame('Kitchen ran out', $order->fresh()->cancel_reason);
+    }
+
+    public function test_shift_page_shows_the_drawer_and_hides_other_restaurants(): void
+    {
+        $branch = $this->company->branches()->firstOrFail();
+        $cashier = User::query()->where('email', 'cashier@roumdoul.test')->firstOrFail();
+        $shifts = app(ShiftService::class);
+        $shift = $shifts->open($branch, $cashier, 2000, 40000);
+        $shifts->addMovement($shift, 'out', 500, 'USD', 'Ice delivery', $cashier);
+        $shifts->close($shift, 1400, 40000, null, $cashier);
+
+        // Made before any back-office request: Filament would stamp new rows with the current tenant.
+        $stranger = User::factory()->create();
+        $rival = app(CompanyProvisioner::class)->create(['name' => 'Rival Café', 'slug' => 'rival'], $stranger);
+        $rivalShift = $shifts->open($rival->branches()->firstOrFail(), $stranger, 0, 0);
+
+        $this->actingAs($this->owner)->get('/app/demo-cafe/shifts')->assertOk()->assertSee('−$1.00', false);
+        $this->actingAs($this->owner)->get("/app/demo-cafe/shifts/{$shift->id}")->assertOk()->assertSee('Ice delivery')->assertSee('$15.00');
+
+        $this->actingAs($this->owner)->get("/app/demo-cafe/shifts/{$rivalShift->id}")->assertNotFound();
     }
 
     public function test_owner_cannot_open_another_restaurant(): void

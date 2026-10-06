@@ -8,6 +8,7 @@ use App\Models\DiningTable;
 use App\Models\MenuItem;
 use App\Models\Order;
 use App\Models\User;
+use App\Services\Billing\ShiftService;
 use App\Services\CompanyProvisioner;
 use App\Services\Ordering\OrderPlacer;
 use Database\Seeders\DatabaseSeeder;
@@ -30,6 +31,7 @@ class CashierApiTest extends TestCase
         $this->seed(DatabaseSeeder::class);
         $this->company = Company::query()->where('slug', 'demo-cafe')->firstOrFail();
         $this->table = $this->company->diningTables()->where('name', 'T1')->firstOrFail();
+        app(ShiftService::class)->open($this->table->branch, User::query()->where('email', 'cashier@roumdoul.test')->firstOrFail(), 0, 0);
     }
 
     private function token(string $email): string

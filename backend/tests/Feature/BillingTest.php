@@ -14,6 +14,7 @@ use App\Models\Payment;
 use App\Models\TableSession;
 use App\Models\User;
 use App\Services\Billing\BillService;
+use App\Services\Billing\ShiftService;
 use App\Services\Ordering\OrderPlacer;
 use Database\Seeders\DatabaseSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -42,6 +43,7 @@ class BillingTest extends TestCase
         $this->table = $this->company->diningTables()->where('name', 'T1')->firstOrFail();
         $this->cashier = User::query()->where('email', 'cashier@roumdoul.test')->firstOrFail();
         $this->bills = app(BillService::class);
+        app(ShiftService::class)->open($this->table->branch, $this->cashier, 0, 0);
     }
 
     /** Fried rice $3.00 + small iced latte $2.25 = $5.25 */
