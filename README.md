@@ -128,6 +128,8 @@ php artisan test
 
 If your database was set up before part B, run `php artisan migrate` in `backend` (keeps your data), then `php artisan reports:rebuild` to fill the reports.
 
-## Next: B6
+## Live updates (B6, done)
 
-Live updates through Laravel Reverb (screens update instantly instead of every few seconds).
+Kitchen, waiter and cashier screens and the customer's phone update instantly through Laravel Reverb (`php artisan reverb:start`, port 8080; `start.bat` opens it). If it is not running, every screen still works by checking every few seconds. Settings: `REVERB_*` in `backend/.env` and `NEXT_PUBLIC_REVERB_*` in `frontend/.env.local` (the keys must match). On the shop Wi-Fi, phones connect to the same PC address they opened the menu on; allow port 8080 in Windows Firewall.
+
+Step 1 is complete. Next: Step 2 (see `docs/step2-features.md`).

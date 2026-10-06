@@ -20,7 +20,7 @@ Read these before larger changes:
 | Customer site `/t/{qr_token}` and staff screens `/staff/*` | Next.js 16 (App Router), React 19, TypeScript, Tailwind 4 | `frontend/` |
 | Database | MySQL 8 / MariaDB 10.4 (XAMPP on the dev PC). Tests: SQLite in memory | |
 | Cache / queue | `database` driver locally on Windows, Redis (predis) in production | |
-| Live updates | Polling for now (customer 5 s, staff 3–4 s). Laravel Reverb planned (part B6) | |
+| Live updates | Laravel Reverb (`App\Support\Live`, `frontend/src/lib/live.ts`); polling stays as fallback (30 s when connected, else customer 5 s, staff 3–4 s) | |
 
 Not related to `coreos_roumdoul` (separate HR product). We only keep `coreos_company_id` / `coreos_branch_id` columns for a future link.
 
@@ -34,6 +34,7 @@ php artisan migrate:fresh --seed   :: demo café + logins (prints QR links)
 php artisan serve                  :: http://localhost:8000
 php artisan test                   :: must stay green
 php artisan schedule:work          :: Telegram day-end summary (start.bat opens it)
+php artisan reverb:start           :: live updates on :8080 (start.bat opens it; screens poll without it)
 php artisan reports:rebuild        :: recompute report tables (optionally a date)
 
 :: frontend (second terminal)
@@ -70,6 +71,7 @@ Demo logins (password `password`): `owner@roumdoul.test` (/app, manager PIN `123
 - `app/Models` – Eloquent models. Concerns: `BelongsToCompany`, `BumpsMenuVersion`, `Auditable`.
 - `app/Services` – `MenuBuilder` (token → table, cached branch menu), `MenuSync` (branch × item rows), `CompanyProvisioner` (new restaurant), `AuditLogger`, `TelegramNotifier`, `Ordering/OrderPlacer|OrderPresenter|ServiceRequests`, `Billing/BillCalculator` (pure bill maths) `|BillService` (open, discount, pay, void, refund) `|BillPresenter`, `Billing/ShiftService` (cash drawer: open, cash in/out, close, expected cash), `Reports/DailySales` (rebuild a branch-day of the report tables) `|SalesReport` (dashboard numbers) `|CsvExport`.
 - `app/Jobs/RebuildDailySales`, `app/Console/Commands` – `reports:rebuild`, `reports:daily-summary` (scheduled every 15 min in `routes/console.php`).
+- `app/Support/Live` + `app/Events/BranchChanged|TableChanged` + `routes/channels.php` – live updates (no data in events; screens re-fetch).
 - `app/Http/Middleware/UseCompanyTimezone` – back office shows times in the company time zone.
 - `app/Support` – `Money` (incl. riel rounding/conversion), `QrCode`, `Tenant`, `TenantScope`, `StaffAccess`, `ManagerPin` (owner/manager PIN approval, rate-limited).
 - `app/Enums` – `OrderStatus`, `StaffRole`, `CompanyStatus`, `Station`, `BillStatus`, `PaymentMethod`.
@@ -106,7 +108,7 @@ Demo logins (password `password`): `owner@roumdoul.test` (/app, manager PIN `123
 
 ## Current status and next task
 
-Step 0, Step 1 part A and Step 1 part B tasks B1–B5 are done (bills & payments, cashier screen, waiter orders, shifts, printing, reports; see `docs/roadmap.md`). **Next: B6 – live updates (Laravel Reverb)**, then Step 1 is complete. Pending decisions from the owner:
+Step 0 and all of Step 1 (part A, and part B: bills & payments, cashier screen, waiter orders, shifts, printing, reports, live updates) are done; see `docs/roadmap.md`. **Next: Step 2** (`docs/step2-features.md`), once the owner decides the items below. Pending decisions from the owner:
 - Discounts: built in B1/B2 as recommended (manager PIN + reason). The owner can still say no; then hide the Discount button on the cashier screen.
 - Split bill by person (recommended: Step 2).
 - **Translations:** today `categories` and `menu_items` have `name_km`, `name_en`, `name_zh`, but `option_groups` and `options` only have `name_km`, `name_en` (inconsistent). Recommended fix in B1: switch all four tables to one JSON `name` column per field (`{"km": "...", "en": "...", "zh": "..."}`, e.g. `spatie/laravel-translatable`), with `companies.languages` choosing which languages a restaurant uses and a fallback order en → km. Do not add more `name_xx` columns until the owner decides.

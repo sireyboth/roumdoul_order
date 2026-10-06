@@ -6,6 +6,7 @@ use App\Enums\BillStatus;
 use App\Enums\OrderStatus;
 use App\Models\Concerns\BelongsToCompany;
 use App\Services\AuditLogger;
+use App\Support\Live;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -36,6 +37,12 @@ class Order extends Model
             'completed_at' => 'datetime',
             'cancelled_at' => 'datetime',
         ];
+    }
+
+    protected static function booted(): void
+    {
+        // Staff screens and the customer phone update at once (Reverb); see App\Support\Live.
+        static::saved(fn (self $order) => Live::changed($order->branch_id, $order->dining_table_id));
     }
 
     public function items(): HasMany

@@ -64,7 +64,7 @@ Browser print, 80 mm layout: customer receipt (company, branch, items, totals, r
 ### B5 – reports ✅ done (7 Oct 2026; exports are CSV files that open in Excel, no extra package)
 `daily_branch_sales`, `daily_item_sales` updated by a queued job on payment / refund / void; `reports:rebuild`; back-office dashboard (today, 7 days, payment methods, best sellers); Excel export (orders, payments, items) ; Telegram daily summary at branch day end.
 
-### B6 – live updates
+### B6 – live updates ✅ done (7 Oct 2026)
 Laravel Reverb + Echo in Next.js: channels `branch.{id}` (staff, private) and `table.{token-hash}` (customer). Keep polling as a fallback.
 
 ## Step 2 (after Step 1 is selling)

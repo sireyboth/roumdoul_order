@@ -66,6 +66,13 @@ Owner edits in Filament → model saved → `BumpsMenuVersion` increments `compa
 
 10. Reports (B5): after a bill is paid, refunded or voided, `RebuildDailySales` runs after the response and recomputes that branch-day in `daily_branch_sales` / `daily_item_sales`. The back-office dashboard (sales today, 7 days, payment methods, best sellers) and Restaurant → Daily sales read those tables; Daily sales has CSV exports (orders, payments, items sold; UTF-8 with BOM for Excel). `php artisan schedule:work` (started by `start.bat`) runs `reports:daily-summary` every 15 minutes: once a branch's business day has ended, its summary goes to the company Telegram chat, once.
 
+## Flow 5 – live updates (B6)
+
+- Any save of an order, service request, table visit, bill or shift calls `App\Support\Live::changed(branch, table)`. At the end of the request (after the response) one empty `changed` event per channel goes to Reverb: `private-branch.{id}` (staff screens; joined through `POST /api/staff/broadcasting/auth` with the Sanctum token, rule in `routes/channels.php` = `StaffAccess`) and `table.{secret}` (customer phone; the secret name is an HMAC of the table id, handed out only by the token-protected session API).
+- Events carry no data: screens re-fetch through their normal API, so permissions are never bypassed.
+- `frontend/src/lib/live.ts` (`useLive`): Echo + pusher-js, host = the address the page was opened on. While connected, polling slows to every 30 s; without Reverb (or without `NEXT_PUBLIC_REVERB_KEY`) the old 3–5 s polling stays.
+- If Reverb is down, broadcasting fails silently (debug log) and requests are not slowed.
+
 ## Status tracks
 
 - Order: placed → accepted → preparing → ready → served → completed; cancel from placed/accepted/preparing (reason). ready → preparing allowed (sent back).

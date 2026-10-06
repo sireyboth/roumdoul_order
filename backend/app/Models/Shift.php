@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Concerns\BelongsToCompany;
+use App\Support\Live;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -35,6 +36,12 @@ class Shift extends Model
             'difference_usd' => 'integer',
             'difference_khr' => 'integer',
         ];
+    }
+
+    protected static function booted(): void
+    {
+        // Staff screens and the customer phone update at once (Reverb); see App\Support\Live.
+        static::saved(fn (self $shift) => Live::changed($shift->branch_id));
     }
 
     public function branch(): BelongsTo

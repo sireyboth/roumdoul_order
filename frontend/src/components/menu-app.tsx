@@ -11,6 +11,7 @@ import ItemSheet from "./item-sheet";
 import CartSheet from "./cart-sheet";
 import OrdersSheet from "./orders-sheet";
 import Sheet from "./sheet";
+import { useLive } from "@/lib/live";
 
 function isSoldOut(item: MenuItem, now: number): boolean {
   return item.sold_out_until !== null && new Date(item.sold_out_until).getTime() > now;
@@ -91,17 +92,20 @@ export default function MenuApp({ menu, token }: { menu: TableMenu; token: strin
     }
   }, [token, visitKey]);
 
-  // Order status updates: check every 5 seconds while the page is open and visible.
+  // Order status updates: instantly when live updates work, otherwise every 5 seconds while visible.
+  const live = useLive(session?.live_channel ?? null, false, () => void refreshSession());
+  const pollMs = live ? 30_000 : 5000;
+
   useEffect(() => {
     const first = window.setTimeout(() => void refreshSession(), 0);
     const id = window.setInterval(() => {
       if (document.visibilityState === "visible") void refreshSession();
-    }, 5000);
+    }, pollMs);
     return () => {
       window.clearTimeout(first);
       window.clearInterval(id);
     };
-  }, [refreshSession]);
+  }, [refreshSession, pollMs]);
 
   useEffect(() => {
     if (!toast) return;

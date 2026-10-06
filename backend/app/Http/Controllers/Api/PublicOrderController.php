@@ -14,6 +14,7 @@ use App\Services\Ordering\OrderPlacer;
 use App\Services\Ordering\OrderPresenter;
 use App\Services\Ordering\ServiceRequests;
 use App\Services\TelegramNotifier;
+use App\Support\Live;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -71,6 +72,7 @@ class PublicOrderController extends Controller
                 // Lets the phone that was part of the last visit say "Paid, thank you".
                 // Only the outcome, never the orders: the next customer may already be at the table.
                 'last_visit' => $this->lastVisit($table->id),
+                'live_channel' => Live::enabled() ? Live::tableChannel($table->id) : null,
             ]])->header('Cache-Control', 'no-store');
         }
 
@@ -94,6 +96,7 @@ class PublicOrderController extends Controller
                 'vat' => $bill->vat,
             ] : null,
             'last_visit' => null,
+            'live_channel' => Live::enabled() ? Live::tableChannel($table->id) : null,
         ]])->header('Cache-Control', 'no-store');
     }
 

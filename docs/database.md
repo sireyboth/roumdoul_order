@@ -544,7 +544,7 @@ Cash rules: riel handed over is compared with the due amount rounded to 100៛, 
 
 ## Shifts (Step 1 part B, B3)
 
-All changes go through `AppServicesBillingShiftService`. Every payment needs an open shift at its branch (the server sets `payments.shift_id`; the screen never sends it). Cash is counted separately in dollars and riel.
+All changes go through `App\Services\Billing\ShiftService`. Every payment needs an open shift at its branch (the server sets `payments.shift_id`; the screen never sends it). Cash is counted separately in dollars and riel.
 
 Expected cash, per currency = opening + cash handed over − change given (payments of this shift) + cash in − cash out − cash refunded in this shift (handed back, net of the change given then).
 
@@ -592,7 +592,7 @@ Indexes: `(shift_id)`
 
 ## Reports (Step 1 part B, B5)
 
-Report copies, never edited by hand: `AppServicesReportsDailySales::rebuild(branch, date)` recomputes a whole branch-day from paid bills, their payments and orders, so it can always be rebuilt (`php artisan reports:rebuild [date] [--from= --to= --branch=]`). A rebuild runs after the response of every payment that settles a bill, refund and void (`RebuildDailySales`, no queue worker needed). Sales are paid bills, counted on the bill's business date; a later refund is counted on the day of the sale it gives back. Foreign keys cascade (derived data, not money of record).
+Report copies, never edited by hand: `App\Services\Reports\DailySales::rebuild(branch, date)` recomputes a whole branch-day from paid bills, their payments and orders, so it can always be rebuilt (`php artisan reports:rebuild [date] [--from= --to= --branch=]`). A rebuild runs after the response of every payment that settles a bill, refund and void (`RebuildDailySales`, no queue worker needed). Sales are paid bills, counted on the bill's business date; a later refund is counted on the day of the sale it gives back. Foreign keys cascade (derived data, not money of record).
 
 ### `daily_branch_sales`
 

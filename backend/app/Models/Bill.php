@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\BillStatus;
 use App\Models\Concerns\BelongsToCompany;
+use App\Support\Live;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -44,6 +45,16 @@ class Bill extends Model
             'paid_at' => 'datetime',
             'voided_at' => 'datetime',
         ];
+    }
+
+    protected static function booted(): void
+    {
+        // Staff screens and the customer phone update at once (Reverb); see App\Support\Live.
+        static::saved(function (self $bill) {
+            if (Live::enabled()) {
+                Live::changed($bill->branch_id, TableSession::query()->whereKey($bill->table_session_id)->value('dining_table_id'));
+            }
+        });
     }
 
     public function branch(): BelongsTo

@@ -28,6 +28,7 @@ Route::prefix('staff')->group(function () {
     Route::middleware('auth:sanctum')->group(function () {
         Route::get('/me', [StaffAuthController::class, 'me']);
         Route::post('/logout', [StaffAuthController::class, 'logout']);
+        Route::post('/broadcasting/auth', [StaffAuthController::class, 'broadcastAuth']);
         Route::get('/branches/{branch}/board', [StaffBoardController::class, 'board']);
         Route::get('/branches/{branch}/menu', [StaffBoardController::class, 'menu']);
         Route::post('/branches/{branch}/menu/{menuItemId}/sold-out', [StaffBoardController::class, 'soldOut'])->whereNumber('menuItemId');

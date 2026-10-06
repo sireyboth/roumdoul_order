@@ -2,8 +2,9 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { SignedOut, staffApi, type Board } from "@/lib/staff";
+import { useLive } from "@/lib/live";
 
-/** Loads the branch board and refreshes it every few seconds. Live push (Reverb) replaces this later. */
+/** Loads the branch board: instantly on a live update (Reverb), and by polling as a fallback. */
 export function useBoard(branchId: number, station: string | null, intervalMs = 3000) {
   const [board, setBoard] = useState<Board | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -26,16 +27,19 @@ export function useBoard(branchId: number, station: string | null, intervalMs = 
     }
   }, [branchId, station]);
 
+  const live = useLive(`branch.${branchId}`, true, () => void refresh());
+  const pollMs = live ? 30_000 : intervalMs;
+
   useEffect(() => {
     const first = window.setTimeout(() => void refresh(), 0);
-    const poll = window.setInterval(() => void refresh(), intervalMs);
+    const poll = window.setInterval(() => void refresh(), pollMs);
     const tick = window.setInterval(() => setNow(Date.now()), 1000);
     return () => {
       window.clearTimeout(first);
       window.clearInterval(poll);
       window.clearInterval(tick);
     };
-  }, [refresh, intervalMs]);
+  }, [refresh, pollMs]);
 
-  return { board, error, signedOut, now, refresh };
+  return { board, error, signedOut, now, refresh, live };
 }

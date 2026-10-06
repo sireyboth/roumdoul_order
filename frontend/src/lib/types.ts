@@ -103,4 +103,6 @@ export type TableSessionState = {
   bill: TableBill | null;
   /** When the table is free again: how the last visit ended (only "paid" is reported). */
   last_visit: { result: "paid"; closed_at: string } | null;
+  /** Reverb channel for instant updates; null when live updates are off. */
+  live_channel: string | null;
 };

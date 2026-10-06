@@ -6,9 +6,11 @@ use App\Http\Controllers\Controller;
 use App\Models\Branch;
 use App\Models\Membership;
 use App\Models\User;
+use App\Support\Live;
 use App\Support\StaffAccess;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Broadcast;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Validation\ValidationException;
@@ -62,6 +64,14 @@ class StaffAuthController extends Controller
             'user' => ['id' => $user->id, 'name' => $user->name],
             'branches' => $this->branchesFor($user),
         ]]);
+    }
+
+    /** Lets a signed-in staff screen join its branch channel for instant updates (rules in routes/channels.php). */
+    public function broadcastAuth(Request $request): mixed
+    {
+        abort_unless(Live::enabled(), 404);
+
+        return Broadcast::auth($request);
     }
 
     public function logout(Request $request): JsonResponse

@@ -17,6 +17,9 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        // Who may listen to which live-update channel (staff screens, Reverb).
+        require base_path('routes/channels.php');
+
         // Catch typos in mass-assignment during development instead of losing data silently.
         Model::preventSilentlyDiscardingAttributes(! $this->app->isProduction());
 

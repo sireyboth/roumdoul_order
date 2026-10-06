@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Concerns\BelongsToCompany;
+use App\Support\Live;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -18,6 +19,12 @@ class ServiceRequest extends Model
     protected function casts(): array
     {
         return ['handled_at' => 'datetime'];
+    }
+
+    protected static function booted(): void
+    {
+        // Staff screens and the customer phone update at once (Reverb); see App\Support\Live.
+        static::saved(fn (self $request) => Live::changed($request->branch_id, $request->dining_table_id));
     }
 
     public function table(): BelongsTo

@@ -9,6 +9,7 @@ import Sheet from "../sheet";
 import PayPanel from "./pay-panel";
 import PinForm from "./pin-form";
 import ShiftSheet from "./shift-sheet";
+import { useLive } from "@/lib/live";
 
 /** Tables with what they owe; tap one to open its bill and take payment. */
 export default function CashierBoard({ branchId }: { branchId: number }) {
@@ -43,12 +44,17 @@ export default function CashierBoard({ branchId }: { branchId: number }) {
     }
   }, [branchId]);
 
+  const live = useLive(`branch.${branchId}`, true, () => {
+    void refresh();
+    void refreshShift();
+  });
+
   useEffect(() => {
     const first = window.setTimeout(() => {
       void refresh();
       void refreshShift();
     }, 0);
-    const poll = window.setInterval(() => void refresh(), 4000);
+    const poll = window.setInterval(() => void refresh(), live ? 30_000 : 4000);
     const shiftPoll = window.setInterval(() => void refreshShift(), 20_000);
     const tick = window.setInterval(() => setNow(Date.now()), 30_000);
     return () => {
@@ -57,7 +63,7 @@ export default function CashierBoard({ branchId }: { branchId: number }) {
       window.clearInterval(shiftPoll);
       window.clearInterval(tick);
     };
-  }, [refresh, refreshShift]);
+  }, [refresh, refreshShift, live]);
 
   if (signedOut) {
     return (
