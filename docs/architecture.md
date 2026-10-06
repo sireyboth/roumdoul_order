@@ -64,7 +64,7 @@ Owner edits in Filament → model saved → `BumpsMenuVersion` increments `compa
 
 9. Printing (B4): `/staff/print/receipt?bill=` (bill while open, receipt once paid; same items from several rounds merged; KHQR picture from Restaurant settings while money is due) and `/staff/print/ticket?order=&station=`. Pages load `GET /api/staff/bills/{id}/receipt` / `orders/{id}/ticket` and call `window.print()` after fonts and pictures load. 80 mm layout in `globals.css` (`.paper`, `@page`). Kitchen screens auto-print new orders in a hidden frame when the branch has "Print kitchen tickets automatically" on (Chrome `--kiosk-printing` skips the dialog).
 
-Still to come (B5): queued job updates `daily_branch_sales` / `daily_item_sales` for the bill's business date.
+10. Reports (B5): after a bill is paid, refunded or voided, `RebuildDailySales` runs after the response and recomputes that branch-day in `daily_branch_sales` / `daily_item_sales`. The back-office dashboard (sales today, 7 days, payment methods, best sellers) and Restaurant → Daily sales read those tables; Daily sales has CSV exports (orders, payments, items sold; UTF-8 with BOM for Excel). `php artisan schedule:work` (started by `start.bat`) runs `reports:daily-summary` every 15 minutes: once a branch's business day has ended, its summary goes to the company Telegram chat, once.
 
 ## Status tracks
 

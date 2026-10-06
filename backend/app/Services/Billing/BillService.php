@@ -16,6 +16,7 @@ use App\Models\Shift;
 use App\Models\TableSession;
 use App\Models\User;
 use App\Services\AuditLogger;
+use App\Services\Reports\DailySales;
 use App\Support\ManagerPin;
 use App\Support\Money;
 use Illuminate\Database\UniqueConstraintViolationException;
@@ -319,6 +320,8 @@ class BillService
 
             $this->closeSession($bill, $by);
 
+            DailySales::queue($bill->branch_id, $bill->business_date->toDateString());
+
             AuditLogger::record('bill.voided', $bill, [
                 'status' => 'void',
                 'total' => $bill->total,
@@ -365,6 +368,8 @@ class BillService
             ]);
 
             $bill->update(['paid_total' => max(0, $bill->paid_total - $payment->amount)]);
+
+            DailySales::queue($bill->branch_id, $bill->business_date->toDateString());
 
             AuditLogger::record('payment.refunded', $payment, [
                 'status' => 'refunded',
@@ -526,6 +531,8 @@ class BillService
             ->where('status', OrderStatus::Served->value)
             ->get()
             ->each(fn (Order $order) => $order->moveTo(OrderStatus::Completed, $by));
+
+        DailySales::queue($bill->branch_id, $bill->business_date->toDateString());
 
         AuditLogger::record('bill.paid', $bill, [
             'status' => 'paid',

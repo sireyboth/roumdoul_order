@@ -9,7 +9,7 @@ use Filament\Widgets\StatsOverviewWidget\Stat;
 /** First thing an owner sees: is the restaurant ready to take QR orders? */
 class SetupOverview extends StatsOverviewWidget
 {
-    protected static ?int $sort = 1;
+    protected static ?int $sort = 5;
 
     protected function getStats(): array
     {

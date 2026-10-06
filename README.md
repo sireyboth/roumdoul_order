@@ -88,6 +88,9 @@ npm run dev
 | Platform admin | http://localhost:8000/admin | admin@roumdoul.test / password |
 | Customer menu | Back office > Tables & QR codes > ⋯ > Open customer menu | none |
 | Kitchen / bar / waiter screens | http://localhost:3000/staff | kitchen@, waiter@ or cashier@roumdoul.test / password |
+| Cashier screen (bills, payments, cash drawer) | http://localhost:3000/staff → 💵 Cashier | cashier@roumdoul.test / password; manager PIN for discounts, voids, refunds: **1234** |
+
+`start.bat` also opens a **scheduler** window (`php artisan schedule:work`) that sends the Telegram sales summary after each business day.
 
 If you set up the database before Step 1, add the new tables and demo staff with:
 
@@ -114,6 +117,17 @@ php artisan test
 - Prices are always recalculated on the server; the same "Send order" tap arriving twice creates one order.
 - Screens refresh every few seconds. Instant updates (Laravel Reverb) come next.
 
-## Next: Step 1 part B
+## Step 1 part B (B1–B5 done)
 
-Payments at the counter (cash / KHQR marked paid), receipts and kitchen tickets printing, shift close, daily reports and Excel export, and live updates through Reverb.
+- **Bills and payments:** one bill per table visit; discounts, service charge and VAT; total in riel rounded to 100៛; cash in dollars or riel with change in either; KHQR / card; void and refund with a manager PIN and a reason.
+- **Cashier screen** (`/staff/cashier`): every table with what it owes and a "wants the bill" badge; tap a table to see the bill and take payment.
+- **Waiters take orders** for a table (`/staff/waiter/order`); the customer sees them on their phone too, and "Paid, thank you" after paying.
+- **Shifts:** start with the cash counted in the drawer (dollars and riel); payments need an open shift; cash in / out; close with a blind count; the difference shows in the back office (Restaurant → Shifts).
+- **Printing:** 80 mm bill / receipt (Khmer + English, riel, the shop's KHQR picture) and kitchen / bar tickets; optional automatic kitchen tickets (Branch → Printing). For printing without a dialog, start Chrome with `--kiosk-printing` on that device.
+- **Reports:** dashboard (sales today, last 7 days, payment methods, best sellers), Restaurant → Daily sales with spreadsheet exports (orders, payments, items sold) that open in Excel, and a Telegram summary after each business day.
+
+If your database was set up before part B, run `php artisan migrate` in `backend` (keeps your data), then `php artisan reports:rebuild` to fill the reports.
+
+## Next: B6
+
+Live updates through Laravel Reverb (screens update instantly instead of every few seconds).

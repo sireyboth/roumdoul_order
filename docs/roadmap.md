@@ -10,11 +10,11 @@ Goal of **Step 1**: sellable to real cafés and restaurants. Step 2 adds feature
 | Order tracking for customers | 1A | ✅ done (instant updates in B6) |
 | Waiter app | 1A + B2 | ✅ calls, ready-to-serve, sold-out, waiter takes an order for a table |
 | Sold-out toggle | 1A | ✅ done (waiter screen + back office) |
-| Telegram alerts | 1A + B5 | ✅ new order · ⏳ daily summary (B5) |
+| Telegram alerts | 1A + B5 | ✅ new order · daily sales summary after each branch day ends |
 | Payments (cash / KHQR marked paid) | B1 + B2 | ✅ cashier screen, cash USD/KHR with change, KHQR/card, discounts, void, refund |
 | Shift close | B3 | ✅ start with counted cash ($ + ៛), cash in/out, blind count, difference; back-office Shifts page |
 | Printing (receipt + kitchen ticket) | B4 | ✅ 80 mm bill/receipt (Khmer + English, riel, KHQR picture), kitchen/bar tickets, auto-print option |
-| Export (Excel) + reports | B5 | ⏳ |
+| Export (Excel) + reports | B5 | ✅ dashboard (today, 7 days, methods, best sellers), Daily sales page, CSV exports for Excel (orders, payments, items) |
 | Upsell suggestions | 2 | planned |
 | Combo / set menus | 2 | planned |
 | Customer feedback after paying | 2 | planned |
@@ -61,7 +61,7 @@ Build in this order, each with tests and a browser run.
 ### B4 – printing ✅ done (7 Oct 2026)
 Browser print, 80 mm layout: customer receipt (company, branch, items, totals, riel, KHQR image from settings, footer) and kitchen/bar ticket per station. Branch print settings (header/footer text, auto-print kitchen tickets on new order).
 
-### B5 – reports
+### B5 – reports ✅ done (7 Oct 2026; exports are CSV files that open in Excel, no extra package)
 `daily_branch_sales`, `daily_item_sales` updated by a queued job on payment / refund / void; `reports:rebuild`; back-office dashboard (today, 7 days, payment methods, best sellers); Excel export (orders, payments, items) ; Telegram daily summary at branch day end.
 
 ### B6 – live updates

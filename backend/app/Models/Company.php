@@ -120,6 +120,16 @@ class Company extends Model implements HasAvatar, HasName
         return $this->hasMany(Shift::class);
     }
 
+    public function dailyBranchSales(): HasMany
+    {
+        return $this->hasMany(DailyBranchSale::class);
+    }
+
+    public function dailyItemSales(): HasMany
+    {
+        return $this->hasMany(DailyItemSale::class);
+    }
+
     public function auditLogs(): HasMany
     {
         return $this->hasMany(AuditLog::class);

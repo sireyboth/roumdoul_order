@@ -33,6 +33,8 @@ composer install
 php artisan migrate:fresh --seed   :: demo café + logins (prints QR links)
 php artisan serve                  :: http://localhost:8000
 php artisan test                   :: must stay green
+php artisan schedule:work          :: Telegram day-end summary (start.bat opens it)
+php artisan reports:rebuild        :: recompute report tables (optionally a date)
 
 :: frontend (second terminal)
 cd frontend
@@ -66,11 +68,13 @@ Demo logins (password `password`): `owner@roumdoul.test` (/app, manager PIN `123
 ## Code layout (backend)
 
 - `app/Models` – Eloquent models. Concerns: `BelongsToCompany`, `BumpsMenuVersion`, `Auditable`.
-- `app/Services` – `MenuBuilder` (token → table, cached branch menu), `MenuSync` (branch × item rows), `CompanyProvisioner` (new restaurant), `AuditLogger`, `TelegramNotifier`, `Ordering/OrderPlacer|OrderPresenter|ServiceRequests`, `Billing/BillCalculator` (pure bill maths) `|BillService` (open, discount, pay, void, refund) `|BillPresenter`, `Billing/ShiftService` (cash drawer: open, cash in/out, close, expected cash).
+- `app/Services` – `MenuBuilder` (token → table, cached branch menu), `MenuSync` (branch × item rows), `CompanyProvisioner` (new restaurant), `AuditLogger`, `TelegramNotifier`, `Ordering/OrderPlacer|OrderPresenter|ServiceRequests`, `Billing/BillCalculator` (pure bill maths) `|BillService` (open, discount, pay, void, refund) `|BillPresenter`, `Billing/ShiftService` (cash drawer: open, cash in/out, close, expected cash), `Reports/DailySales` (rebuild a branch-day of the report tables) `|SalesReport` (dashboard numbers) `|CsvExport`.
+- `app/Jobs/RebuildDailySales`, `app/Console/Commands` – `reports:rebuild`, `reports:daily-summary` (scheduled every 15 min in `routes/console.php`).
+- `app/Http/Middleware/UseCompanyTimezone` – back office shows times in the company time zone.
 - `app/Support` – `Money` (incl. riel rounding/conversion), `QrCode`, `Tenant`, `TenantScope`, `StaffAccess`, `ManagerPin` (owner/manager PIN approval, rate-limited).
 - `app/Enums` – `OrderStatus`, `StaffRole`, `CompanyStatus`, `Station`, `BillStatus`, `PaymentMethod`.
 - `app/Http/Controllers/Api` – `PublicMenuController`, `PublicOrderController`, `StaffAuthController`, `StaffBoardController`, `StaffCashierController` (cashier tables/bills/payments + waiter orders), `StaffShiftController` (cash drawer), `StaffPrintController` (receipt / ticket data).
-- `app/Filament/App/Resources` – Branches (+ Areas, Menu availability relation managers), DiningTables (QR, add many), Categories, MenuItems, OptionGroups, Staff, Orders, Shifts (read-only).
+- `app/Filament/App/Resources` – Branches (+ Areas, Menu availability relation managers), DiningTables (QR, add many), Categories, MenuItems, OptionGroups, Staff, Orders, Shifts (read-only), DailySales (read-only + CSV export actions). `app/Filament/App/Widgets` – SalesOverview, SalesChart, PaymentMethodsChart, BestSellers, SetupOverview.
 - `routes/api.php` – public (`throttle:public-read|public-write`, limited per token) and staff (`auth:sanctum`).
 
 ## Code layout (frontend)
@@ -82,6 +86,9 @@ Demo logins (password `password`): `owner@roumdoul.test` (/app, manager PIN `123
 - Next.js 16: `params`/`searchParams` are Promises; use `PageProps<'/route'>` / `RouteContext<'/route'>` types. Read `node_modules/next/dist/docs` when unsure (see `frontend/AGENTS.md`).
 
 ## Gotchas we already hit
+
+- **Filament widgets are not tenant-scoped.** Dashboard widget queries must filter `company_id` themselves. Widgets load lazily, so test them with `Livewire::test(Widget::class)`, not by fetching the dashboard HTML.
+- Report tables are derived: never update them directly; call `DailySales::queue()` / `rebuild()`.
 
 - **Filament injects closure arguments by name.** In `->relationship('x', 'name', fn (Builder $query) => ...)` the parameter must be called `$query` (not `$q`), or you get a null model. Same for `$record`, `$data`, `$get`, `$set`, `$state`.
 - Filament 5 API: forms use `Filament\Schemas\Schema`, layout components in `Filament\Schemas\Components\*`, actions in `Filament\Actions\*`, `->schema([...])` on actions, `->mutateDataUsing()`, `recordActions()` / `toolbarActions()`.
@@ -99,8 +106,8 @@ Demo logins (password `password`): `owner@roumdoul.test` (/app, manager PIN `123
 
 ## Current status and next task
 
-Step 0 (foundation) and Step 1 part A (ordering, kitchen, waiter, calls, sold-out, Telegram new-order alert, Orders page) are done. **Next: Step 1 part B, task B1** – see `docs/roadmap.md`. Pending decisions from the owner:
-- Discounts in B2 (recommended: yes).
+Step 0, Step 1 part A and Step 1 part B tasks B1–B5 are done (bills & payments, cashier screen, waiter orders, shifts, printing, reports; see `docs/roadmap.md`). **Next: B6 – live updates (Laravel Reverb)**, then Step 1 is complete. Pending decisions from the owner:
+- Discounts: built in B1/B2 as recommended (manager PIN + reason). The owner can still say no; then hide the Discount button on the cashier screen.
 - Split bill by person (recommended: Step 2).
 - **Translations:** today `categories` and `menu_items` have `name_km`, `name_en`, `name_zh`, but `option_groups` and `options` only have `name_km`, `name_en` (inconsistent). Recommended fix in B1: switch all four tables to one JSON `name` column per field (`{"km": "...", "en": "...", "zh": "..."}`, e.g. `spatie/laravel-translatable`), with `companies.languages` choosing which languages a restaurant uses and a fallback order en → km. Do not add more `name_xx` columns until the owner decides.
 

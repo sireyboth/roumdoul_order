@@ -3,6 +3,7 @@
 namespace App\Providers\Filament;
 
 use App\Filament\App\Pages\Tenancy\EditCompanyProfile;
+use App\Http\Middleware\UseCompanyTimezone;
 use App\Filament\App\Pages\Tenancy\RegisterCompany;
 use App\Models\Company;
 use Filament\FontProviders\GoogleFontProvider;
@@ -74,6 +75,9 @@ class AppPanelProvider extends PanelProvider
             ])
             ->authMiddleware([
                 Authenticate::class,
-            ]);
+            ])
+            ->tenantMiddleware([
+                UseCompanyTimezone::class,
+            ], isPersistent: true);
     }
 }

@@ -86,6 +86,8 @@ class BackOfficeAccessTest extends TestCase
 
         $this->actingAs($this->owner)->get('/app/demo-cafe/shifts')->assertOk()->assertSee('−$1.00', false);
         $this->actingAs($this->owner)->get("/app/demo-cafe/shifts/{$shift->id}")->assertOk()->assertSee('Ice delivery')->assertSee('$15.00');
+        // Shown in Phnom Penh time, not UTC.
+        $this->actingAs($this->owner)->get('/app/demo-cafe/shifts')->assertSee($shift->opened_at->timezone('Asia/Phnom_Penh')->format('d M H:i'));
 
         $this->actingAs($this->owner)->get("/app/demo-cafe/shifts/{$rivalShift->id}")->assertNotFound();
     }

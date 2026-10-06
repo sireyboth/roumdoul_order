@@ -590,17 +590,21 @@ Cash put into or taken out of the drawer that is not a sale (change float, payin
 
 Indexes: `(shift_id)`
 
-## Planned for Step 1 part B
+## Reports (Step 1 part B, B5)
 
-### Still awaiting the owner
+Report copies, never edited by hand: `AppServicesReportsDailySales::rebuild(branch, date)` recomputes a whole branch-day from paid bills, their payments and orders, so it can always be rebuilt (`php artisan reports:rebuild [date] [--from= --to= --branch=]`). A rebuild runs after the response of every payment that settles a bill, refund and void (`RebuildDailySales`, no queue worker needed). Sales are paid bills, counted on the bill's business date; a later refund is counted on the day of the sale it gives back. Foreign keys cascade (derived data, not money of record).
+
+### `daily_branch_sales`
+
+UNIQUE `(branch_id, business_date)`, index `(company_id, business_date)`. Columns: `company_id, branch_id, business_date, currency, orders_count` (not cancelled), `cancelled_count, bills_count` (paid), `items_count, gross` (subtotal of paid bills), `discounts, service_charge, vat, net` (total of paid bills), `refunds, cash, khqr, card, other` (confirmed payments by method), `summary_sent_at` (Telegram day-end summary sent).
+
+### `daily_item_sales`
+
+UNIQUE `(branch_id, business_date, menu_item_id)`, index `(company_id, business_date)`. Columns: `company_id, branch_id, business_date, menu_item_id` (null if the item was deleted), `name_en, name_km, quantity, amount`. Best sellers and the items export.
+
+## Still awaiting the owner
 
 **Translatable names (proposed fix #6):** replace `name_km` / `name_en` / `name_zh` (and `description_*`) on `categories`, `menu_items`, `option_groups`, `options` with JSON `name` / `description` (`{"km","en","zh",...}`) and add `companies.languages` JSON. Chinese is missing on options today; JSON lets a restaurant add any language without a schema change. Order item snapshots would then store the JSON too. Not built until the owner decides.
-
-### `daily_branch_sales` (report copy)
-UNIQUE `(branch_id, business_date)`: `orders_count, bills_count, items_count, cancelled_count, gross, discounts, service_charge, vat, net, refunds, cash, khqr, card, other`. Updated by a queued job after payment / refund / void; `php artisan reports:rebuild {date}` recomputes from raw rows.
-
-### `daily_item_sales` (report copy)
-UNIQUE `(branch_id, business_date, menu_item_id)`: `name_en, name_km, quantity, amount`. Best sellers.
 
 ## Planned for Step 2 (not built)
 
