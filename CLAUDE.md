@@ -37,6 +37,7 @@ php artisan test                   :: must stay green
 php artisan schedule:work          :: Telegram day-end summary (start.bat opens it)
 php artisan reverb:start           :: live updates on :8080 (start.bat opens it; screens poll without it)
 php artisan reports:rebuild        :: recompute report tables (optionally a date)
+php artisan admin:create           :: platform admin on a server (no demo data); rerun to reset password
 
 :: frontend (second terminal)
 cd frontend

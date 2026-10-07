@@ -164,3 +164,13 @@ Stop XAMPP, rename `C:\xampp\mysql\data` to `data_old`, create a new `data` fold
 ### Numbers in a report look wrong
 
 Reports are copies. Run `php artisan reports:rebuild` (optionally with a date) to recompute them from the bills and payments.
+
+### First login on a real server
+
+Do not use `--seed` on a server: it adds the demo café and logins with the password `password`. Instead run:
+
+1. `php artisan migrate --force`
+2. `php artisan db:seed --class=PlanSeeder --force` (the plans only)
+3. `php artisan admin:create`: asks for your email, name and password and makes you a platform admin (`/admin`).
+
+Forgot the password? Run `php artisan admin:create` again with the same email to set a new one.
