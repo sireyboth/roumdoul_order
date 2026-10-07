@@ -183,7 +183,7 @@ class DemoSeeder extends Seeder
     private function floorPlan(Company $company, Branch $branch): void
     {
         $tables = $branch->diningTables()->pluck('id', 'name');
-        $areas = $branch->diningTables()->whereIn('name', ['T1', 'T2', 'T3', 'T4', 'T5', 'T6'])->distinct()->pluck('table_area_id');
+        $areas = $branch->diningTables()->whereIn('name', ['T1', 'T2', 'T3', 'T4', 'T5', 'T6'])->pluck('table_area_id')->unique();
         // One floor for all six tables: on their area if they share one, else the Main floor.
         $areaId = $areas->count() === 1 ? $areas->first() : null;
 
