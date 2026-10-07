@@ -95,6 +95,8 @@ class MenuBuilder
             'company' => [
                 'name' => $company->name,
                 'logo_url' => $company->logo_path ? Storage::disk('public')->url($company->logo_path) : null,
+                'cover_url' => $company->cover_path ? Storage::disk('public')->url($company->cover_path) : null,
+                'tagline' => $company->tagline,
                 'currency' => $company->currency,
                 'khr_per_usd' => $company->khr_per_usd,
                 'vat_bp' => $company->vat_bp,
@@ -141,7 +143,10 @@ class MenuBuilder
         $items = MenuItem::query()
             ->where('company_id', $company->id)
             ->where('is_active', true)
-            ->with(['optionGroups.options' => fn ($q) => $q->where('is_active', true)])
+            ->with([
+                'optionGroups.options' => fn ($q) => $q->where('is_active', true),
+                'suggestions' => fn ($q) => $q->select('menu_items.id'),
+            ])
             ->orderBy('sort_order')
             ->orderBy('name_en')
             ->get()
@@ -149,7 +154,7 @@ class MenuBuilder
             ->filter(fn (MenuItem $item) => $settings->get($item->id)?->is_available ?? true)
             ->groupBy('category_id');
 
-        return Category::query()
+        $categories = Category::query()
             ->where('company_id', $company->id)
             ->where('is_active', true)
             ->orderBy('sort_order')
@@ -164,7 +169,23 @@ class MenuBuilder
                     ->all(),
             ])
             ->filter(fn (array $category) => $category['items'] !== [])
-            ->values()
+            ->values();
+
+        // "Goes well with": only suggest items this branch's menu actually shows
+        // (active, same company, available here, in a visible category).
+        $shown = $categories->pluck('items')->flatten(1)->pluck('id')->flip();
+
+        return $categories
+            ->map(function (array $category) use ($shown) {
+                foreach ($category['items'] as $i => $item) {
+                    $category['items'][$i]['suggestions'] = array_values(array_filter(
+                        $item['suggestions'],
+                        fn (int $id) => $id !== $item['id'] && $shown->has($id),
+                    ));
+                }
+
+                return $category;
+            })
             ->all();
     }
 
@@ -200,6 +221,8 @@ class MenuBuilder
                 ])
                 ->values()
                 ->all(),
+            // Ids of items to offer after this one is added, in the owner's order.
+            'suggestions' => $item->suggestions->pluck('id')->map(fn ($id) => (int) $id)->values()->all(),
         ];
     }
 

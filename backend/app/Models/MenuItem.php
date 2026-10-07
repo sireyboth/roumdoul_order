@@ -49,6 +49,18 @@ class MenuItem extends Model
             ->orderByPivot('sort_order');
     }
 
+    /**
+     * "Goes well with": items offered in a small pop-up after this one is added.
+     * Pivot changes fire no model events, so whoever edits them calls bumpMenuVersion().
+     */
+    public function suggestions(): BelongsToMany
+    {
+        return $this->belongsToMany(MenuItem::class, 'menu_item_suggestions', 'menu_item_id', 'suggested_item_id')
+            ->withPivot('sort_order')
+            ->orderByPivot('sort_order')
+            ->withTimestamps();
+    }
+
     public function branchSettings(): HasMany
     {
         return $this->hasMany(BranchMenuItem::class);

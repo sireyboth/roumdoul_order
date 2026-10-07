@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\PublicOrderController;
 use App\Http\Controllers\Api\StaffAuthController;
 use App\Http\Controllers\Api\StaffBoardController;
 use App\Http\Controllers\Api\StaffCashierController;
+use App\Http\Controllers\Api\StaffFloorController;
 use App\Http\Controllers\Api\StaffPrintController;
 use App\Http\Controllers\Api\StaffShiftController;
 use Illuminate\Support\Facades\Route;
@@ -54,6 +55,10 @@ Route::prefix('staff')->group(function () {
         // Printing (B4)
         Route::get('/bills/{bill}/receipt', [StaffPrintController::class, 'receipt']);
         Route::get('/orders/{order}/ticket', [StaffPrintController::class, 'ticket']);
+
+        // Floor plan (table layout): everyone at the branch sees it, owners/managers edit it
+        Route::get('/branches/{branch}/floor-plan', [StaffFloorController::class, 'show']);
+        Route::put('/branches/{branch}/floor-plan', [StaffFloorController::class, 'update']);
 
         // Waiter takes an order for a table (B2)
         Route::get('/branches/{branch}/order-menu', [StaffCashierController::class, 'orderMenu']);

@@ -1,45 +1,296 @@
 @import "tailwindcss";
 
+/*
+ * Design tokens. One font for every language: Kantumruy Pro draws Khmer and Latin
+ * with the same weight and rhythm, so mixed Khmer/English lines look like one voice.
+ */
 :root {
+  --bg: #f5f3ee;
   --surface: #ffffff;
-  --fg: #16201c;
-  --muted: #5e6b65;
-  --line: #e2e7e4;
-  --chip: #f1f4f2;
-  --brand: #0f7a5c;
-  --brand-soft: #e7f4ef;
-  --danger: #b42318;
+  --surface-2: #faf8f4;
+  --fg: #15201b;
+  --muted: #66716b;
+  --line: #e6e2d9;
+  --chip: #efece5;
+  --brand: #0d7a5a;
+  --brand-strong: #075a42;
+  --brand-soft: #e3f3ec;
+  --accent: #e7a33e;
+  --accent-soft: #fdf1dc;
+  --danger: #c0352b;
   --danger-bg: #fdecea;
+  --warn: #b7791f;
+  --warn-bg: #fef4e1;
+  --ring: rgb(13 122 90 / 0.35);
+  --shadow-sm: 0 1px 2px rgb(21 32 27 / 0.06), 0 1px 1px rgb(21 32 27 / 0.04);
+  --shadow-md: 0 6px 20px -6px rgb(21 32 27 / 0.14), 0 2px 6px rgb(21 32 27 / 0.06);
+  --shadow-lg: 0 24px 60px -18px rgb(21 32 27 / 0.3), 0 8px 18px -8px rgb(21 32 27 / 0.12);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --surface: #111715;
-    --fg: #e6ece9;
-    --muted: #9aa8a1;
-    --line: #2a3430;
-    --chip: #1c2421;
+    --bg: #0c1110;
+    --surface: #141b19;
+    --surface-2: #19211f;
+    --fg: #e8eeeb;
+    --muted: #97a59e;
+    --line: #26302d;
+    --chip: #1f2826;
     --brand: #2fb487;
-    --brand-soft: #16302a;
+    --brand-strong: #5fd0a7;
+    --brand-soft: #143229;
+    --accent: #f0b65e;
+    --accent-soft: #3a2b12;
     --danger: #ff8a80;
     --danger-bg: #3a1714;
+    --warn: #f3c46b;
+    --warn-bg: #362810;
+    --ring: rgb(47 180 135 / 0.45);
+    --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.4);
+    --shadow-md: 0 8px 24px -8px rgb(0 0 0 / 0.6);
+    --shadow-lg: 0 28px 70px -20px rgb(0 0 0 / 0.8);
     color-scheme: dark;
   }
 }
 
 @theme inline {
   --font-sans: "Kantumruy Pro", ui-sans-serif, system-ui, sans-serif;
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-fg: var(--fg);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-chip: var(--chip);
+  --color-brand: var(--brand);
+  --color-brand-strong: var(--brand-strong);
+  --color-brand-soft: var(--brand-soft);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-danger: var(--danger);
+  --color-danger-bg: var(--danger-bg);
+  --color-warn: var(--warn);
+  --color-warn-bg: var(--warn-bg);
+  --shadow-soft: var(--shadow-sm);
+  --shadow-card: var(--shadow-md);
+  --shadow-float: var(--shadow-lg);
 }
 
 html,
 body {
-  background: var(--surface);
+  background: var(--bg);
   color: var(--fg);
 }
 
 body {
   font-family: var(--font-sans);
   -webkit-tap-highlight-color: transparent;
+  /* Khmer has stacked vowels and subscripts: a little more line height keeps them from touching. */
+  line-height: 1.6;
+}
+
+:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* ---------- Motion ---------- */
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes sheet-up {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: none;
+  }
+}
+@keyframes sheet-down {
+  from {
+    transform: none;
+  }
+  to {
+    transform: translateY(100%);
+  }
+}
+@keyframes fade-out {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes scale-out {
+  to {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+}
+@keyframes pop {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(1.25);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+@keyframes ring {
+  0% {
+    box-shadow: 0 0 0 0 var(--ring);
+  }
+  100% {
+    box-shadow: 0 0 0 14px transparent;
+  }
+}
+@keyframes shimmer {
+  from {
+    background-position: -400px 0;
+  }
+  to {
+    background-position: 400px 0;
+  }
+}
+@keyframes wiggle {
+  0%,
+  100% {
+    transform: rotate(0);
+  }
+  20% {
+    transform: rotate(-14deg);
+  }
+  40% {
+    transform: rotate(12deg);
+  }
+  60% {
+    transform: rotate(-8deg);
+  }
+  80% {
+    transform: rotate(5deg);
+  }
+}
+@keyframes draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+@keyframes slide-in-right {
+  from {
+    opacity: 0;
+    transform: translateX(24px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.anim-fade-up {
+  animation: fade-up 0.45s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  animation-delay: calc(var(--i, 0) * 40ms);
+}
+.anim-fade-in {
+  animation: fade-in 0.3s ease both;
+}
+.anim-scale-in {
+  animation: scale-in 0.28s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.anim-sheet-up {
+  animation: sheet-up 0.34s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.anim-pop {
+  animation: pop 0.35s ease;
+}
+.anim-ring {
+  animation: ring 1.6s ease-out infinite;
+}
+.anim-wiggle {
+  animation: wiggle 0.9s ease;
+}
+.anim-float {
+  animation: float 3s ease-in-out infinite;
+}
+.anim-slide-in-right {
+  animation: slide-in-right 0.35s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+.anim-draw {
+  stroke-dasharray: 60;
+  stroke-dashoffset: 60;
+  animation: draw 0.6s 0.15s ease forwards;
+}
+.skeleton {
+  background: linear-gradient(90deg, var(--chip) 0, var(--surface-2) 50%, var(--chip) 100%);
+  background-size: 800px 100%;
+  animation: shimmer 1.4s linear infinite;
+}
+
+/* Closing sheets play their exit before unmounting (see components/sheet.tsx). */
+.sheet-backdrop[data-closing] {
+  animation: fade-out 0.2s ease forwards;
+}
+.sheet-panel[data-closing] {
+  animation: sheet-down 0.22s ease forwards;
+}
+@media (min-width: 640px) {
+  .sheet-panel {
+    animation-name: scale-in;
+  }
+  .sheet-panel[data-closing] {
+    animation: scale-out 0.18s ease forwards;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 
 /* 80 mm receipt / kitchen ticket printers (B4). Paper is 80 mm wide with about 72 mm printable. */

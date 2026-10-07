@@ -15,7 +15,9 @@ Goal of **Step 1**: sellable to real cafés and restaurants. Step 2 adds feature
 | Shift close | B3 | ✅ start with counted cash ($ + ៛), cash in/out, blind count, difference; back-office Shifts page |
 | Printing (receipt + kitchen ticket) | B4 | ✅ 80 mm bill/receipt (Khmer + English, riel, KHQR picture), kitchen/bar tickets, auto-print option |
 | Export (Excel) + reports | B5 | ✅ dashboard (today, 7 days, methods, best sellers), Daily sales page, CSV exports for Excel (orders, payments, items) |
-| Upsell suggestions | 2 | planned |
+| Upsell suggestions | 2 | basic version done (Goes well with pop-up; special price + reports still planned) |
+| Floor plan (drawn table layout on staff screens) | extra | ✅ backend done: `floor_plans`, `GET/PUT /api/staff/branches/{id}/floor-plan` (owner/manager edit) |
+| Restaurant branding (logo, cover photo, tagline) | extra | ✅ logo required at sign-up; cover + tagline on the customer menu |
 | Combo / set menus | 2 | planned |
 | Customer feedback after paying | 2 | planned |
 | Multi-language menu (Chinese etc.) | 2 | planned. Chinese names exist on categories/items only; translatable JSON names proposed for B1 |

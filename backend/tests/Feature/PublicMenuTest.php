@@ -6,6 +6,8 @@ use App\Enums\CompanyStatus;
 use App\Models\Company;
 use App\Models\DiningTable;
 use App\Models\MenuItem;
+use App\Models\User;
+use App\Services\CompanyProvisioner;
 use Database\Seeders\DatabaseSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -115,9 +117,9 @@ class PublicMenuTest extends TestCase
 
     public function test_one_restaurants_token_never_shows_another_restaurants_menu(): void
     {
-        $other = app(\App\Services\CompanyProvisioner::class)->create(
+        $other = app(CompanyProvisioner::class)->create(
             ['name' => 'Other Place'],
-            \App\Models\User::factory()->create(),
+            User::factory()->create(),
         );
         $otherBranch = $other->branches()->first();
         $otherCategory = $other->categories()->create(['name_km' => 'ផ្សេង', 'name_en' => 'Other']);
@@ -143,5 +145,45 @@ class PublicMenuTest extends TestCase
 
         $this->menu($old)->assertNotFound();
         $this->menu($this->table->fresh()->qr_token)->assertOk();
+    }
+
+    public function test_menu_shows_branding_and_suggestions_in_order(): void
+    {
+        $this->company->update(['cover_path' => 'covers/shop.jpg']);
+
+        $response = $this->menu()->assertOk()
+            ->assertJsonPath('data.company.tagline', 'Coffee, tea & brunch')
+            ->assertJsonPath('data.company.logo_url', null);
+        $this->assertStringEndsWith('/storage/covers/shop.jpg', $response->json('data.company.cover_url'));
+
+        $items = collect($response->json('data.categories'))->pluck('items')->flatten(1)->keyBy('id');
+        $id = fn (string $name) => MenuItem::query()->where('name_en', $name)->value('id');
+
+        $this->assertSame([$id('Iced lemon tea'), $id('Iced Khmer coffee')], $items[$id('Fried rice')]['suggestions']);
+        $this->assertSame([$id('Iced Khmer coffee'), $id('Iced latte')], $items[$id('Num pang (baguette)')]['suggestions']);
+        $this->assertSame([], $items[$id('Bubble milk tea')]['suggestions']);
+    }
+
+    public function test_suggestions_skip_hidden_inactive_and_foreign_items(): void
+    {
+        $rice = MenuItem::query()->where('name_en', 'Fried rice')->firstOrFail();
+        $tea = MenuItem::query()->where('name_en', 'Iced lemon tea')->firstOrFail();
+        $coffee = MenuItem::query()->where('name_en', 'Iced Khmer coffee')->firstOrFail();
+
+        $other = app(CompanyProvisioner::class)->create(['name' => 'Other Place'], User::factory()->create());
+        $otherCategory = $other->categories()->create(['name_km' => 'ផ្សេង', 'name_en' => 'Other']);
+        $foreign = $other->menuItems()->create(['category_id' => $otherCategory->id, 'name_km' => 'ផ្សេង', 'name_en' => 'Secret dish', 'price' => 999]);
+        // Even if a foreign id got into the table somehow, it is never shown.
+        $rice->suggestions()->attach($foreign->id, ['sort_order' => 5]);
+        $rice->bumpMenuVersion();
+
+        $suggestions = fn () => collect($this->menu()->json('data.categories'))->pluck('items')->flatten(1)->firstWhere('id', $rice->id)['suggestions'];
+        $this->assertSame([$tea->id, $coffee->id], $suggestions());
+
+        // Hidden in this branch, then switched off company-wide.
+        $tea->branchSettings()->where('branch_id', $this->table->branch_id)->firstOrFail()->update(['is_available' => false]);
+        $this->assertSame([$coffee->id], $suggestions());
+        $coffee->update(['is_active' => false]);
+        $this->assertSame([], $suggestions());
     }
 }

@@ -4,7 +4,9 @@
 
 import { formatMoney } from "@/lib/money";
 import type { Names } from "@/lib/types";
+import { Phone } from "lucide-react";
 import { usePrint } from "./use-print";
+import { PrintLoading, PrintToolbar } from "./chrome";
 
 type Receipt = {
   company: { name: string; logo_url: string | null; khqr_url: string | null };
@@ -54,7 +56,7 @@ export default function PrintReceipt({ billId, auto }: { billId: number; auto: b
   const { data, error } = usePrint<Receipt>(`bills/${billId}/receipt`, auto);
 
   if (error) return <p className="p-6 text-[var(--danger)]">{error}</p>;
-  if (!data) return <p className="p-6 text-[var(--muted)]">Loading...</p>;
+  if (!data) return <PrintLoading />;
 
   const { company, branch, bill } = data;
   const money = (minor: number) => formatMoney(minor, bill.currency);
@@ -63,14 +65,19 @@ export default function PrintReceipt({ billId, auto }: { billId: number; auto: b
 
   return (
     <>
-      <Toolbar />
+      <PrintToolbar />
       <div className="paper">
         <header className="flex flex-col items-center gap-0.5 text-center">
           {company.logo_url && <img src={company.logo_url} alt="" className="mb-1 h-14 w-14 rounded-full object-cover grayscale" />}
           <p className="text-base font-bold">{company.name}</p>
           <p>{branch.name}</p>
           {branch.address && <p>{branch.address}</p>}
-          {branch.phone && <p>☎ {branch.phone}</p>}
+          {branch.phone && (
+            <p className="flex items-center gap-1">
+              <Phone className="size-3" aria-hidden />
+              {branch.phone}
+            </p>
+          )}
           {branch.header && <p className="whitespace-pre-line">{branch.header}</p>}
         </header>
 
@@ -153,15 +160,6 @@ export default function PrintReceipt({ billId, auto }: { billId: number; auto: b
         </footer>
       </div>
     </>
-  );
-}
-
-function Toolbar() {
-  return (
-    <div className="no-print flex justify-center gap-2 p-3">
-      <button type="button" onClick={() => window.print()} className="rounded-xl bg-[var(--brand)] px-5 py-2.5 font-semibold text-white">🖨️ Print</button>
-      <button type="button" onClick={() => window.close()} className="rounded-xl border border-[var(--line)] px-5 py-2.5 font-semibold">Close</button>
-    </div>
   );
 }
 

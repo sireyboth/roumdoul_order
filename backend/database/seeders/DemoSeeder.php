@@ -4,9 +4,11 @@ namespace Database\Seeders;
 
 use App\Enums\CompanyStatus;
 use App\Enums\Station;
+use App\Models\Branch;
 use App\Models\Category;
 use App\Models\Company;
 use App\Models\DiningTable;
+use App\Models\FloorPlan;
 use App\Models\MenuItem;
 use App\Models\OptionGroup;
 use App\Models\User;
@@ -36,7 +38,7 @@ class DemoSeeder extends Seeder
             'currency' => 'USD',
         ], $owner, 'pro');
 
-        $company->update(['status' => CompanyStatus::Active, 'trial_ends_at' => null]);
+        $company->update(['status' => CompanyStatus::Active, 'trial_ends_at' => null, 'tagline' => 'Coffee, tea & brunch']);
 
         // Manager PIN for approving discounts, voids and refunds on the cashier screen.
         $company->memberships()->where('user_id', $owner->id)->update(['pin_hash' => bcrypt('1234')]);
@@ -83,14 +85,23 @@ class DemoSeeder extends Seeder
         $tea = $this->category($company, 'តែ', 'Tea', 2);
         $food = $this->category($company, 'ម្ហូប', 'Food', 3);
 
-        $this->item($company, $coffee, 'កាហ្វេទឹកដោះគោទឹកកក', 'Iced Khmer coffee', 150, Station::Bar, [$size, $sugar, $ice]);
-        $this->item($company, $coffee, 'កាហ្វេឡាតេទឹកកក', 'Iced latte', 225, Station::Bar, [$size, $sugar, $ice, $extras]);
-        $this->item($company, $coffee, 'អាមេរិកាណូក្តៅ', 'Hot Americano', 175, Station::Bar, [$size, $sugar, $extras]);
+        $khmerCoffee = $this->item($company, $coffee, 'កាហ្វេទឹកដោះគោទឹកកក', 'Iced Khmer coffee', 150, Station::Bar, [$size, $sugar, $ice]);
+        $latte = $this->item($company, $coffee, 'កាហ្វេឡាតេទឹកកក', 'Iced latte', 225, Station::Bar, [$size, $sugar, $ice, $extras]);
+        $americano = $this->item($company, $coffee, 'អាមេរិកាណូក្តៅ', 'Hot Americano', 175, Station::Bar, [$size, $sugar, $extras]);
         $this->item($company, $tea, 'តែទឹកដោះគោពពុះ', 'Bubble milk tea', 200, Station::Bar, [$size, $sugar, $ice]);
-        $this->item($company, $tea, 'តែក្រូចឆ្មា', 'Iced lemon tea', 150, Station::Bar, [$size, $sugar, $ice]);
-        $this->item($company, $food, 'បាយឆា', 'Fried rice', 300, Station::Kitchen, [$spice]);
+        $lemonTea = $this->item($company, $tea, 'តែក្រូចឆ្មា', 'Iced lemon tea', 150, Station::Bar, [$size, $sugar, $ice]);
+        $friedRice = $this->item($company, $food, 'បាយឆា', 'Fried rice', 300, Station::Kitchen, [$spice]);
         $this->item($company, $food, 'នំបញ្ចុក', 'Khmer rice noodles', 250, Station::Kitchen, []);
-        $this->item($company, $food, 'នំប៉័ងសាច់', 'Num pang (baguette)', 200, Station::Kitchen, [$spice]);
+        $numPang = $this->item($company, $food, 'នំប៉័ងសាច់', 'Num pang (baguette)', 200, Station::Kitchen, [$spice]);
+
+        // "Goes well with" pop-up: a bite with a coffee, a drink with food.
+        $this->suggest($khmerCoffee, [$numPang]);
+        $this->suggest($latte, [$numPang]);
+        $this->suggest($americano, [$numPang]);
+        $this->suggest($numPang, [$khmerCoffee, $latte]);
+        $this->suggest($friedRice, [$lemonTea, $khmerCoffee]);
+
+        $this->floorPlan($company, $branch);
 
         foreach (['kitchen' => 'Demo Kitchen', 'waiter' => 'Demo Waiter', 'cashier' => 'Demo Cashier'] as $role => $name) {
             $user = User::query()->firstOrCreate(
@@ -134,7 +145,7 @@ class DemoSeeder extends Seeder
     }
 
     /** @param array<int, OptionGroup> $groups */
-    private function item(Company $company, Category $category, string $km, string $en, int $price, Station $station, array $groups): void
+    private function item(Company $company, Category $category, string $km, string $en, int $price, Station $station, array $groups): MenuItem
     {
         static $sort = 0;
 
@@ -150,6 +161,68 @@ class DemoSeeder extends Seeder
 
         foreach ($groups as $i => $group) {
             $item->optionGroups()->attach($group->id, ['sort_order' => $i]);
+        }
+
+        return $item;
+    }
+
+    /** @param array<int, MenuItem> $suggested */
+    private function suggest(MenuItem $item, array $suggested): void
+    {
+        foreach ($suggested as $i => $other) {
+            $item->suggestions()->attach($other->id, ['sort_order' => $i]);
+        }
+
+        $item->bumpMenuVersion();
+    }
+
+    /** BKK1's drawn layout for the staff screens: all six tables, the bar and the cashier. */
+    private function floorPlan(Company $company, Branch $branch): void
+    {
+        $tables = $branch->diningTables()->pluck('id', 'name');
+        $areas = $branch->diningTables()->whereIn('name', ['T1', 'T2', 'T3', 'T4', 'T5', 'T6'])->distinct()->pluck('table_area_id');
+        // One floor for all six tables: on their area if they share one, else the Main floor.
+        $areaId = $areas->count() === 1 ? $areas->first() : null;
+
+        $object = fn (string $id, string $kind, int $x, int $y, int $w, int $h, array $extra = []) => [
+            'id' => $id, 'kind' => $kind, 'x' => $x, 'y' => $y, 'w' => $w, 'h' => $h, 'rotation' => 0,
+            'table_id' => null, 'seats' => null, 'label' => null, 'color' => null, ...$extra,
+        ];
+        $table = fn (string $name, string $kind, int $x, int $y, int $w, int $h, int $seats) => $object(
+            'seed-'.strtolower($name), $kind, $x, $y, $w, $h, ['table_id' => $tables[$name], 'seats' => $seats],
+        );
+
+        FloorPlan::query()->create([
+            'company_id' => $company->id,
+            'branch_id' => $branch->id,
+            'table_area_id' => $areaId,
+            'floor' => 'wood',
+            'width' => 1200,
+            'height' => 800,
+            'objects' => [
+                $object('seed-rug', 'rug', 380, 330, 340, 260, ['color' => '#c8a27a']),
+                $object('seed-wall', 'wall', 0, 0, 1200, 20),
+                $object('seed-plant-1', 'plant', 40, 40, 56, 56),
+                $object('seed-plant-2', 'plant', 1110, 720, 56, 56),
+                $object('seed-plant-3', 'plant', 40, 720, 56, 56),
+                $table('T1', 'table_square', 160, 160, 80, 80, 4),
+                $table('T2', 'table_square', 360, 160, 80, 80, 2),
+                $table('T3', 'table_round', 560, 150, 100, 100, 4),
+                $table('T4', 'table_long', 150, 420, 180, 80, 6),
+                $table('T5', 'table_round', 450, 410, 100, 100, 4),
+                $table('T6', 'table_square', 640, 420, 80, 80, 2),
+                $object('seed-bar', 'bar_counter', 860, 120, 260, 70, ['label' => 'Bar']),
+                $object('seed-stool-1', 'stool', 880, 210, 36, 36),
+                $object('seed-stool-2', 'stool', 950, 210, 36, 36),
+                $object('seed-stool-3', 'stool', 1020, 210, 36, 36),
+                $object('seed-cashier', 'cashier', 900, 560, 170, 70, ['label' => 'Cashier']),
+                $object('seed-door', 'door', 520, 760, 130, 40, ['label' => 'Entrance']),
+            ],
+        ]);
+
+        // Keep the tables' seat counts the same as on the plan.
+        foreach (['T1' => 4, 'T2' => 2, 'T3' => 4, 'T4' => 6, 'T5' => 4, 'T6' => 2] as $name => $seats) {
+            DiningTable::query()->whereKey($tables[$name])->update(['seats' => $seats]);
         }
     }
 }

@@ -69,20 +69,22 @@ Demo logins (password `password`): `owner@roumdoul.test` (/app, manager PIN `123
 
 ## Code layout (backend)
 
-- `app/Models` – Eloquent models. Concerns: `BelongsToCompany`, `BumpsMenuVersion`, `Auditable`.
+- `app/Models` – Eloquent models (incl. `FloorPlan`: drawn table layout per branch × area; `MenuItem::suggestions()` = "Goes well with"). Concerns: `BelongsToCompany`, `BumpsMenuVersion`, `Auditable`.
 - `app/Services` – `MenuBuilder` (token → table, cached branch menu), `MenuSync` (branch × item rows), `CompanyProvisioner` (new restaurant), `AuditLogger`, `TelegramNotifier`, `Ordering/OrderPlacer|OrderPresenter|ServiceRequests`, `Billing/BillCalculator` (pure bill maths) `|BillService` (open, discount, pay, void, refund) `|BillPresenter`, `Billing/ShiftService` (cash drawer: open, cash in/out, close, expected cash), `Reports/DailySales` (rebuild a branch-day of the report tables) `|SalesReport` (dashboard numbers) `|CsvExport`.
 - `app/Jobs/RebuildDailySales`, `app/Console/Commands` – `reports:rebuild`, `reports:daily-summary` (scheduled every 15 min in `routes/console.php`).
 - `app/Support/Live` + `app/Events/BranchChanged|TableChanged` + `routes/channels.php` – live updates (no data in events; screens re-fetch).
 - `app/Http/Middleware/UseCompanyTimezone` – back office shows times in the company time zone.
 - `app/Support` – `Money` (incl. riel rounding/conversion), `QrCode`, `Tenant`, `TenantScope`, `StaffAccess`, `ManagerPin` (owner/manager PIN approval, rate-limited).
 - `app/Enums` – `OrderStatus`, `StaffRole`, `CompanyStatus`, `Station`, `BillStatus`, `PaymentMethod`.
-- `app/Http/Controllers/Api` – `PublicMenuController`, `PublicOrderController`, `StaffAuthController`, `StaffBoardController`, `StaffCashierController` (cashier tables/bills/payments + waiter orders), `StaffShiftController` (cash drawer), `StaffPrintController` (receipt / ticket data).
+- `app/Http/Controllers/Api` – `PublicMenuController`, `PublicOrderController`, `StaffAuthController`, `StaffBoardController`, `StaffCashierController` (cashier tables/bills/payments + waiter orders), `StaffShiftController` (cash drawer), `StaffPrintController` (receipt / ticket data), `StaffFloorController` (floor plan: GET any staff, PUT owner/manager).
 - `app/Filament/App/Resources` – Branches (+ Areas, Menu availability relation managers), DiningTables (QR, add many), Categories, MenuItems, OptionGroups, Staff, Orders, Shifts (read-only), DailySales (read-only + CSV export actions). `app/Filament/App/Widgets` – SalesOverview, SalesChart, PaymentMethodsChart, BestSellers, SetupOverview.
 - `routes/api.php` – public (`throttle:public-read|public-write`, limited per token) and staff (`auth:sanctum`).
 
 ## Code layout (frontend)
 
-- `src/app/t/[token]/page.tsx` – customer menu (server) → `components/menu-app.tsx` (client: cart, send order, tracking, call waiter).
+- `src/app/t/[token]/page.tsx` – customer menu (server) → `components/menu-app.tsx` (client: hero with the restaurant's cover/logo/name, search, cart, "Goes well with" pop-up after adding, send order, tracking, call waiter). Desktop: categories left, items grid, cart panel right (`CartPanel`); phones: chips + bottom cart bar.
+- Design system: tokens + animation classes (`anim-fade-up` with `--i` stagger, `anim-pop`, `skeleton`, ...) in `src/app/globals.css`; shared `components/ui.tsx` (Button, Badge, Alert, Field, EmptyState, SuccessMark) and `components/sheet.tsx` (animated, `size` md/lg/xl). Icons: `lucide-react` only, **no emoji**. One font (Kantumruy Pro) for Khmer and Latin. Staff screens use `components/staff/chrome.tsx` (`PAGE` wide container, `BackLink`).
+- Floor plan: `lib/floor.ts` (object kinds, floor materials, chair placement; units are cm), `components/floor/floor-stage.tsx` (CSS 3D diorama, 2D/3D, drag/resize/zoom/pan), `floor-editor.tsx` (`/staff/floor`, owners/managers), `components/staff/floor-view.tsx` (cashier's live plan).
 - `src/app/staff/*` – sign-in + `kitchen` (columns New/Preparing/Ready, timers, chime) + `waiter` (calls, ready to serve, sold-out) + `waiter/order` (new order for a table, reuses `ItemSheet`) + `cashier` (tables grid → bill sheet → `pay-panel`, `pin-form`; `shift-sheet` for the drawer) + `print/receipt`, `print/ticket` (80 mm, `use-print` hook).
 - `src/app/api/t/...` and `src/app/api/staff/...` – proxies to Laravel (`lib/backend.ts`).
 - `src/lib` – `types.ts`, `money.ts`, `i18n.ts` (Khmer/English strings), `table-api.ts`, `staff.ts`.

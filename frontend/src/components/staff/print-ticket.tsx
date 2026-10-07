@@ -2,6 +2,7 @@
 
 import type { BoardItem } from "@/lib/staff";
 import { usePrint } from "./use-print";
+import { PrintLoading, PrintToolbar } from "./chrome";
 
 type Ticket = {
   id: number;
@@ -22,16 +23,13 @@ export default function PrintTicket({ orderId, station, auto }: { orderId: numbe
   const { data, error } = usePrint<Ticket>(`orders/${orderId}/ticket${station ? `?station=${station}` : ""}`, auto);
 
   if (error) return <p className="p-6 text-[var(--danger)]">{error}</p>;
-  if (!data) return <p className="p-6 text-[var(--muted)]">Loading...</p>;
+  if (!data) return <PrintLoading />;
 
   const time = new Date(data.placed_at).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
 
   return (
     <>
-      <div className="no-print flex justify-center gap-2 p-3">
-        <button type="button" onClick={() => window.print()} className="rounded-xl bg-[var(--brand)] px-5 py-2.5 font-semibold text-white">🖨️ Print</button>
-        <button type="button" onClick={() => window.close()} className="rounded-xl border border-[var(--line)] px-5 py-2.5 font-semibold">Close</button>
-      </div>
+      <PrintToolbar />
       <div className="paper">
         <div className="flex items-baseline justify-between">
           <p className="text-3xl font-black">{data.table ?? "—"}</p>
@@ -53,7 +51,7 @@ export default function PrintTicket({ orderId, station, auto }: { orderId: numbe
                 </p>
                 {item.name.km && item.name.en && <p className="text-sm">{item.name.en}</p>}
                 {item.options.length > 0 && <p className="text-sm">— {item.options.map((o) => o.km || o.en).join(", ")}</p>}
-                {item.note && <p className="mt-0.5 border border-black px-1 text-sm font-bold">📝 {item.note}</p>}
+                {item.note && <p className="mt-0.5 border border-black px-1 text-sm font-bold">Note: {item.note}</p>}
               </li>
             ))}
           </ul>
@@ -61,7 +59,7 @@ export default function PrintTicket({ orderId, station, auto }: { orderId: numbe
         {data.note && (
           <>
             <hr className="my-1.5 border-0 border-t border-dashed border-black" />
-            <p className="font-bold">📝 {data.note}</p>
+            <p className="font-bold">Note: {data.note}</p>
           </>
         )}
       </div>

@@ -118,14 +118,14 @@ class BranchAccessTest extends TestCase
         $tkOrder = $this->sale($this->tk);
 
         $this->actingAs($this->tkManager);
-        $this->get('/app/demo-cafe/orders')->assertOk()->assertSee('K1')->assertDontSee('T1');
+        $this->get('/app/demo-cafe/orders')->assertOk()->assertSee('K1')->assertDontSeeText('T1');
         $this->get("/app/demo-cafe/orders/{$tkOrder->id}")->assertOk();
         $this->get("/app/demo-cafe/orders/{$bkkOrder->id}")->assertNotFound();
-        $this->get('/app/demo-cafe/branches')->assertOk()->assertSee('Toul Kork')->assertDontSee('BKK1');
+        $this->get('/app/demo-cafe/branches')->assertOk()->assertSee('Toul Kork')->assertDontSeeText('BKK1');
         $this->get("/app/demo-cafe/branches/{$this->bkk->id}/edit")->assertNotFound();
-        $this->get('/app/demo-cafe/dining-tables')->assertOk()->assertSee('K1')->assertDontSee('T6');
-        $this->get('/app/demo-cafe/shifts')->assertOk()->assertSee('Toul Kork')->assertDontSee('BKK1');
-        $this->get('/app/demo-cafe/daily-sales')->assertOk()->assertSee('Toul Kork')->assertDontSee('BKK1');
+        $this->get('/app/demo-cafe/dining-tables')->assertOk()->assertSee('K1')->assertDontSeeText('T6');
+        $this->get('/app/demo-cafe/shifts')->assertOk()->assertSee('Toul Kork')->assertDontSeeText('BKK1');
+        $this->get('/app/demo-cafe/daily-sales')->assertOk()->assertSee('Toul Kork')->assertDontSeeText('BKK1');
 
         Filament::setCurrentPanel('app');
         Filament::setTenant($this->company);

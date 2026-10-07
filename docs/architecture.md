@@ -33,7 +33,7 @@ Diagrams: the "Roumdoul Order System" page, https://claude.ai/artifact/XFXdQJczE
 
 1. Phone opens `/t/{token}`. Next.js server calls `GET /api/public/tables/{token}`.
 2. `MenuBuilder::resolveTable()` finds the table (token lookup cached 10 min, forgotten when the table changes), loads company and branch fresh, checks: table active, branch active, company active or in trial.
-3. Branch menu comes from cache key `menu:{branch}:{company.menu_version}.{branch.menu_version}`; on a miss it is built from `menu_items` + `branch_menu_items` (hidden items removed, branch price applied, `sold_out_until` passed through so the phone can grey items out).
+3. Branch menu comes from cache key `menu:{branch}:{company.menu_version}.{branch.menu_version}`; on a miss it is built from `menu_items` + `branch_menu_items` (hidden items removed, branch price applied, `sold_out_until` passed through so the phone can grey items out). Each item carries `suggestions` ("Goes well with" ids from `menu_item_suggestions`, only items on this branch's menu); the company block carries `logo_url`, `cover_url` and `tagline`.
 4. Customer builds a cart (localStorage, per token + menu version) and taps Send. Phone → `POST /api/t/{token}/orders` → Laravel `POST /api/public/tables/{token}/orders` with `idempotency_key`, item ids, option ids, quantities, notes.
 5. `OrderPlacer`: re-reads items/options/branch settings, rejects hidden/sold-out/invalid choices, computes prices, then in one transaction: lock branch + table → find or open `table_sessions` → next daily `number` → insert `orders` + `order_items` → audit log.
 6. After the response: Telegram alert to the company chat.
@@ -45,6 +45,7 @@ Diagrams: the "Roumdoul Order System" page, https://claude.ai/artifact/XFXdQJczE
 2. Kitchen polls `GET /api/staff/branches/{id}/board?station=kitchen|bar` every 3 s: active orders (placed/accepted/preparing/ready, plus served in the last 10 min) with items filtered by station, and open service requests.
 3. Buttons call `POST /api/staff/orders/{id}/status` → `Order::moveTo()` (allowed moves only, timestamps, audit log). Cancel: owner/manager/cashier with reason.
 4. Waiter screen: calls (`POST /api/staff/requests/{id}/done`), ready orders → Served, sold-out toggle (`POST /api/staff/branches/{id}/menu/{item}/sold-out` → `branch_menu_items.sold_out_until` → branch menu version bump → customers see it on next load).
+5. Floor plan: `GET /api/staff/branches/{id}/floor-plan` (any staff of the branch) returns `can_edit`, the branch's areas, active tables and saved floors (`floor_plans`, one per area, null = Main floor). Owners/managers save one floor with `PUT` (same URL): every object is validated, table objects must point at an active table of this branch (once each), those tables are taken off the branch's other floors, and seats drawn on a table update `dining_tables.seats`. Audit log `floor_plan.saved`; staff screens get a live `changed`.
 
 ## Flow 3 – menu changes
 

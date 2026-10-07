@@ -28,6 +28,7 @@ use Filament\Tables\Columns\ToggleColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
 use UnitEnum;
 
 class MenuItemResource extends Resource
@@ -105,6 +106,39 @@ class MenuItemResource extends Resource
                             ->disk('public')
                             ->directory('menu')
                             ->maxSize(3072),
+                    ]),
+                Section::make('Goes well with')
+                    ->columnSpan(2)
+                    ->schema([
+                        Select::make('suggestions')
+                            ->label('Suggest with (Goes well with)')
+                            ->helperText('After a customer adds this item, these are suggested in a small pop-up. Pick up to 3, e.g. a pastry for a coffee.')
+                            ->multiple()
+                            ->maxItems(3)
+                            ->relationship(
+                                'suggestions',
+                                'name_en',
+                                fn (Builder $query, ?Model $record) => TenantScope::apply($query)
+                                    ->when($record, fn (Builder $q) => $q->whereKeyNot($record->getKey()))
+                                    ->orderBy('menu_items.sort_order'),
+                            )
+                            ->saveRelationshipsUsing(function (Model $record, $state) {
+                                $ids = collect($state ?? [])->map(fn ($id) => (int) $id)->unique()->values();
+                                // Only items of this restaurant, never the item itself.
+                                $allowed = TenantScope::apply(MenuItem::query())
+                                    ->whereKey($ids)
+                                    ->whereKeyNot($record->getKey())
+                                    ->pluck('id')
+                                    ->all();
+                                $record->suggestions()->sync(
+                                    $ids->filter(fn ($id) => in_array($id, $allowed))
+                                        ->take(3)
+                                        ->values()
+                                        ->mapWithKeys(fn ($id, $i) => [$id => ['sort_order' => $i]])
+                                        ->all(),
+                                );
+                            })
+                            ->preload(),
                     ]),
             ]),
         ]);

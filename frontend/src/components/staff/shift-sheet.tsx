@@ -1,9 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import { ArrowDownToLine, ArrowRightLeft, ArrowUpFromLine, CircleAlert, CircleCheck, Lock, Play, Wallet, X } from "lucide-react";
 import { staffApi, type Shift, type ShiftState } from "@/lib/staff";
 import { formatMoney, parseAmount } from "@/lib/money";
 import Sheet from "../sheet";
+import { Alert, Badge, Button, inputClass } from "../ui";
 
 const usd = (cents: number) => `${cents < 0 ? "−" : ""}${formatMoney(Math.abs(cents), "USD")}`;
 const khr = (riel: number) => `${riel < 0 ? "−" : ""}${formatMoney(Math.abs(riel), "KHR")}`;
@@ -33,15 +35,20 @@ export default function ShiftSheet({
   }
 
   return (
-    <Sheet onClose={onClose} label="Cash drawer">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <h2 className="text-xl font-semibold">Cash drawer</h2>
+    <Sheet onClose={onClose} label="Cash drawer" size="lg">
+      <div className="flex items-center gap-3 sm:pr-10">
+        <span className={`grid size-12 shrink-0 place-items-center rounded-2xl ${shift ? "bg-[var(--brand-soft)] text-[var(--brand)]" : "bg-[var(--chip)] text-[var(--muted)]"}`}>
+          <Wallet className="size-6" aria-hidden />
+        </span>
+        <div className="min-w-0 flex-1">
+          <h2 className="text-xl font-bold tracking-tight">Cash drawer</h2>
           <p className="text-sm text-[var(--muted)]">
             {shift ? `Shift open since ${new Date(shift.opened_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} · ${shift.opened_by ?? ""}` : "No shift open"}
           </p>
         </div>
-        <button type="button" onClick={onClose} className="rounded-full border border-[var(--line)] px-3 py-1.5 text-sm">Close</button>
+        <button type="button" onClick={onClose} aria-label="Close" className="grid size-9 place-items-center rounded-full bg-[var(--chip)] text-[var(--muted)] sm:hidden">
+          <X className="size-4" aria-hidden />
+        </button>
       </div>
 
       {justClosed && <Result shift={justClosed} />}
@@ -49,15 +56,17 @@ export default function ShiftSheet({
       {!shift ? (
         <>
           {!justClosed && state.last_closed && (
-            <p className="rounded-lg bg-[var(--chip)] p-3 text-sm text-[var(--muted)]">
+            <p className="rounded-2xl bg-[var(--chip)] px-4 py-3 text-sm text-[var(--muted)]">
               Last shift closed {new Date(state.last_closed.closed_at ?? "").toLocaleString()} with{" "}
               {usd(state.last_closed.counted_usd ?? 0)} · {khr(state.last_closed.counted_khr ?? 0)} counted.
             </p>
           )}
-          <OpenForm onOpen={async (u, k, note) => {
-            await post(`branches/${branchId}/shift`, { opening_cash_usd: u, opening_cash_khr: k, note });
-            setJustClosed(null);
-          }} />
+          <OpenForm
+            onOpen={async (u, k, note) => {
+              await post(`branches/${branchId}/shift`, { opening_cash_usd: u, opening_cash_khr: k, note });
+              setJustClosed(null);
+            }}
+          />
         </>
       ) : (
         <>
@@ -87,8 +96,12 @@ export default function ShiftSheet({
 
           {panel === "none" && (
             <div className="grid grid-cols-2 gap-2">
-              <button type="button" onClick={() => setPanel("move")} className="rounded-xl border border-[var(--line)] px-3 py-3 font-semibold">Cash in / out</button>
-              <button type="button" onClick={() => setPanel("close")} className="rounded-xl bg-[var(--fg)] px-3 py-3 font-semibold text-[var(--surface)]">Count &amp; close shift</button>
+              <Button tone="neutral" size="lg" icon={ArrowRightLeft} onClick={() => setPanel("move")}>
+                Cash in / out
+              </Button>
+              <Button tone="dark" size="lg" icon={Lock} onClick={() => setPanel("close")}>
+                Count &amp; close shift
+              </Button>
             </div>
           )}
         </>
@@ -110,55 +123,79 @@ function Summary({ shift, currency }: { shift: Shift; currency: "USD" | "KHR" })
   const methods = Object.entries(s.by_method);
 
   return (
-    <>
-      <table className="w-full text-sm tabular-nums">
-        <thead>
-          <tr className="text-left text-[var(--muted)]">
-            <th className="py-1 font-medium" />
-            <th className="py-1 text-right font-medium">Dollars</th>
-            <th className="py-1 text-right font-medium">Riel</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.filter(([, u, k]) => u !== 0 || k !== 0).map(([label, u, k]) => (
-            <tr key={label} className="border-t border-[var(--line)]">
-              <td className="py-1.5">{label}</td>
-              <td className="py-1.5 text-right">{usd(u)}</td>
-              <td className="py-1.5 text-right">{khr(k)}</td>
+    <div className="anim-fade-in flex flex-col gap-4">
+      <div className="grid grid-cols-2 gap-3">
+        <div className="rounded-2xl bg-[var(--brand-soft)] px-4 py-3">
+          <p className="text-xs font-semibold tracking-wide text-[var(--brand-strong)] uppercase">Should be in drawer · $</p>
+          <p className="text-2xl font-bold tabular-nums">{usd(s.expected_usd)}</p>
+        </div>
+        <div className="rounded-2xl bg-[var(--brand-soft)] px-4 py-3">
+          <p className="text-xs font-semibold tracking-wide text-[var(--brand-strong)] uppercase">Should be in drawer · ៛</p>
+          <p className="text-2xl font-bold tabular-nums">{khr(s.expected_khr)}</p>
+        </div>
+      </div>
+
+      <div className="overflow-hidden rounded-2xl border border-[var(--line)]">
+        <table className="w-full text-sm tabular-nums">
+          <thead className="bg-[var(--surface-2)]">
+            <tr className="text-left text-[var(--muted)]">
+              <th className="px-4 py-2 font-medium" />
+              <th className="px-4 py-2 text-right font-medium">Dollars</th>
+              <th className="px-4 py-2 text-right font-medium">Riel</th>
             </tr>
-          ))}
-          <tr className="border-t-2 border-[var(--fg)] text-base font-bold">
-            <td className="py-2">Should be in drawer</td>
-            <td className="py-2 text-right">{usd(s.expected_usd)}</td>
-            <td className="py-2 text-right">{khr(s.expected_khr)}</td>
-          </tr>
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {rows.filter(([, u, k]) => u !== 0 || k !== 0).map(([label, u, k]) => (
+              <tr key={label} className="border-t border-[var(--line)]">
+                <td className="px-4 py-2">{label}</td>
+                <td className="px-4 py-2 text-right">{usd(u)}</td>
+                <td className="px-4 py-2 text-right">{khr(k)}</td>
+              </tr>
+            ))}
+            <tr className="border-t-2 border-[var(--fg)] text-base font-bold">
+              <td className="px-4 py-2.5">Should be in drawer</td>
+              <td className="px-4 py-2.5 text-right">{usd(s.expected_usd)}</td>
+              <td className="px-4 py-2.5 text-right">{khr(s.expected_khr)}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
 
       <div className="flex flex-wrap gap-2 text-sm">
         {methods.length === 0 ? (
           <span className="text-[var(--muted)]">No payments yet this shift.</span>
         ) : (
           methods.map(([method, row]) => (
-            <span key={method} className="rounded-full bg-[var(--chip)] px-3 py-1">
+            <Badge key={method} tone="neutral" className="px-3 py-1 text-sm text-[var(--fg)]">
               <strong className="uppercase">{method}</strong> {row.count} · {formatMoney(row.amount, currency)}
-            </span>
+            </Badge>
           ))
         )}
-        {s.refunds_count > 0 && <span className="rounded-full bg-[var(--danger-bg)] px-3 py-1 text-[var(--danger)]">{s.refunds_count} refund(s)</span>}
+        {s.refunds_count > 0 && (
+          <Badge tone="danger" className="px-3 py-1 text-sm">
+            {s.refunds_count} refund(s)
+          </Badge>
+        )}
       </div>
 
       {shift.movements.length > 0 && (
-        <ul className="flex flex-col gap-1 text-sm">
+        <ul className="flex flex-col gap-1.5 text-sm">
           {shift.movements.map((m) => (
-            <li key={m.id} className="flex justify-between gap-2 rounded-lg border border-[var(--line)] px-3 py-1.5">
-              <span>{m.type === "in" ? "➕ In" : "➖ Out"} · {m.reason}</span>
-              <span className="tabular-nums">{formatMoney(m.amount, m.currency)}</span>
+            <li key={m.id} className="flex items-center justify-between gap-2 rounded-2xl border border-[var(--line)] px-4 py-2">
+              <span className="flex items-center gap-2">
+                {m.type === "in" ? (
+                  <ArrowDownToLine className="size-4 text-[var(--brand)]" aria-hidden />
+                ) : (
+                  <ArrowUpFromLine className="size-4 text-[var(--danger)]" aria-hidden />
+                )}
+                <span className="font-medium">{m.type === "in" ? "In" : "Out"}</span> · {m.reason}
+              </span>
+              <span className="font-semibold tabular-nums">{formatMoney(m.amount, m.currency)}</span>
             </li>
           ))}
         </ul>
       )}
-    </>
+    </div>
   );
 }
 
@@ -166,17 +203,23 @@ function Result({ shift }: { shift: Shift }) {
   const du = shift.difference_usd ?? 0;
   const dk = shift.difference_khr ?? 0;
   const ok = du === 0 && dk === 0;
+  const Icon = ok ? CircleCheck : CircleAlert;
   return (
-    <div className={`rounded-xl p-4 ${ok ? "bg-[var(--brand)] text-white" : "bg-amber-300 text-black"}`}>
-      <p className="text-lg font-bold">{ok ? "Shift closed. Drawer is exact ✓" : "Shift closed with a difference"}</p>
-      <p className="text-sm">
-        Expected {usd(shift.summary.expected_usd)} · {khr(shift.summary.expected_khr)}; counted {usd(shift.counted_usd ?? 0)} · {khr(shift.counted_khr ?? 0)}
-      </p>
-      {!ok && (
-        <p className="mt-1 font-semibold">
-          Difference: {du > 0 ? "+" : ""}{usd(du)} · {dk > 0 ? "+" : ""}{khr(dk)} {du < 0 || dk < 0 ? "(short)" : "(over)"}
+    <div className={`anim-scale-in flex gap-3 rounded-3xl p-5 ${ok ? "bg-[var(--brand)] text-white dark:text-[#06140f]" : "bg-[var(--warn-bg)] text-[var(--fg)]"}`}>
+      <Icon className={`size-7 shrink-0 ${ok ? "" : "text-[var(--warn)]"}`} aria-hidden />
+      <div>
+        <p className="text-lg font-bold">{ok ? "Shift closed. Drawer is exact" : "Shift closed with a difference"}</p>
+        <p className="text-sm opacity-90">
+          Expected {usd(shift.summary.expected_usd)} · {khr(shift.summary.expected_khr)}; counted {usd(shift.counted_usd ?? 0)} · {khr(shift.counted_khr ?? 0)}
         </p>
-      )}
+        {!ok && (
+          <p className="mt-1 font-semibold">
+            Difference: {du > 0 ? "+" : ""}
+            {usd(du)} · {dk > 0 ? "+" : ""}
+            {khr(dk)} {du < 0 || dk < 0 ? "(short)" : "(over)"}
+          </p>
+        )}
+      </div>
     </div>
   );
 }
@@ -203,18 +246,18 @@ function amountOrZero(typed: string, currency: "USD" | "KHR"): number | null {
   return typed.trim() === "" ? 0 : parseAmount(typed, currency);
 }
 
+const FORM = "anim-scale-in flex flex-col gap-3 rounded-3xl border border-[var(--line)] bg-[var(--surface-2)] p-4";
+
 function CashInputs({ usdValue, khrValue, onUsd, onKhr }: { usdValue: string; khrValue: string; onUsd: (v: string) => void; onKhr: (v: string) => void }) {
   return (
-    <div className="grid grid-cols-2 gap-2">
-      <label className="flex flex-col gap-1 text-sm">
-        <span className="text-[var(--muted)]">Dollars ($)</span>
-        <input inputMode="decimal" aria-label="Dollars" placeholder="0.00" value={usdValue} onChange={(e) => onUsd(e.target.value)}
-          className="rounded-lg border border-[var(--line)] bg-transparent px-3 py-2.5 text-lg tabular-nums" />
+    <div className="grid grid-cols-2 gap-3">
+      <label className="flex flex-col gap-1.5 text-sm">
+        <span className="font-medium text-[var(--muted)]">Dollars ($)</span>
+        <input inputMode="decimal" aria-label="Dollars" placeholder="0.00" value={usdValue} onChange={(e) => onUsd(e.target.value)} className={`${inputClass} h-14 text-xl font-semibold tabular-nums`} />
       </label>
-      <label className="flex flex-col gap-1 text-sm">
-        <span className="text-[var(--muted)]">Riel (៛)</span>
-        <input inputMode="numeric" aria-label="Riel" placeholder="0" value={khrValue} onChange={(e) => onKhr(e.target.value)}
-          className="rounded-lg border border-[var(--line)] bg-transparent px-3 py-2.5 text-lg tabular-nums" />
+      <label className="flex flex-col gap-1.5 text-sm">
+        <span className="font-medium text-[var(--muted)]">Riel (៛)</span>
+        <input inputMode="numeric" aria-label="Riel" placeholder="0" value={khrValue} onChange={(e) => onKhr(e.target.value)} className={`${inputClass} h-14 text-xl font-semibold tabular-nums`} />
       </label>
     </div>
   );
@@ -233,15 +276,15 @@ function OpenForm({ onOpen }: { onOpen: (usdCents: number, riel: number, note?: 
         e.preventDefault();
         if (cents !== null && riel !== null) void run(() => onOpen(cents, riel));
       }}
-      className="flex flex-col gap-3 rounded-xl border border-[var(--line)] p-3"
+      className={FORM}
     >
-      <h3 className="font-semibold">Start a shift</h3>
+      <h3 className="font-bold">Start a shift</h3>
       <p className="text-sm text-[var(--muted)]">Count the cash in the drawer now. Payments can be taken once the shift is open.</p>
       <CashInputs usdValue={u} khrValue={k} onUsd={setU} onKhr={setK} />
-      {error && <p role="alert" className="rounded-lg bg-[var(--danger-bg)] p-2 text-sm text-[var(--danger)]">{error}</p>}
-      <button type="submit" disabled={busy || cents === null || riel === null} className="rounded-xl bg-[var(--brand)] px-4 py-3 font-semibold text-white disabled:opacity-40">
+      {error && <Alert>{error}</Alert>}
+      <Button type="submit" size="lg" icon={Play} disabled={busy || cents === null || riel === null}>
         {busy ? "Starting..." : "Start shift"}
-      </button>
+      </Button>
     </form>
   );
 }
@@ -260,33 +303,48 @@ function MoveForm({ onCancel, onSave }: { onCancel: () => void; onSave: (body: {
         e.preventDefault();
         if (amount) void run(() => onSave({ type, amount, currency: cur, reason: reason.trim() }));
       }}
-      className="flex flex-col gap-3 rounded-xl border border-[var(--line)] p-3"
+      className={FORM}
     >
-      <h3 className="font-semibold">Cash in or out</h3>
+      <h3 className="font-bold">Cash in or out</h3>
       <div className="flex flex-wrap gap-2">
-        {(["out", "in"] as const).map((t) => (
-          <button key={t} type="button" aria-pressed={type === t} onClick={() => setType(t)}
-            className={`rounded-full px-3 py-1.5 text-sm font-semibold ${type === t ? "bg-[var(--brand)] text-white" : "bg-[var(--chip)]"}`}>
-            {t === "out" ? "➖ Take out" : "➕ Put in"}
-          </button>
-        ))}
+        {(["out", "in"] as const).map((t) => {
+          const Icon = t === "out" ? ArrowUpFromLine : ArrowDownToLine;
+          return (
+            <button
+              key={t}
+              type="button"
+              aria-pressed={type === t}
+              onClick={() => setType(t)}
+              className={`flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-sm font-semibold transition ${type === t ? "bg-[var(--brand)] text-white shadow-soft dark:text-[#06140f]" : "bg-[var(--chip)] hover:bg-[var(--line)]"}`}
+            >
+              <Icon className="size-4" aria-hidden />
+              {t === "out" ? "Take out" : "Put in"}
+            </button>
+          );
+        })}
+        <span className="mx-1 w-px bg-[var(--line)]" aria-hidden />
         {(["USD", "KHR"] as const).map((c) => (
-          <button key={c} type="button" aria-pressed={cur === c} onClick={() => setCur(c)}
-            className={`rounded-full px-3 py-1.5 text-sm font-semibold ${cur === c ? "bg-[var(--fg)] text-[var(--surface)]" : "bg-[var(--chip)]"}`}>
+          <button
+            key={c}
+            type="button"
+            aria-pressed={cur === c}
+            onClick={() => setCur(c)}
+            className={`rounded-full px-3.5 py-1.5 text-sm font-semibold transition ${cur === c ? "bg-[var(--fg)] text-[var(--surface)]" : "bg-[var(--chip)] hover:bg-[var(--line)]"}`}
+          >
             {c === "USD" ? "$" : "៛"}
           </button>
         ))}
       </div>
-      <input inputMode="decimal" aria-label="Amount" placeholder={cur === "USD" ? "5.00" : "20000"} value={typed} onChange={(e) => setTyped(e.target.value)}
-        className="rounded-lg border border-[var(--line)] bg-transparent px-3 py-2.5 text-lg tabular-nums" />
-      <input aria-label="What for" placeholder="What for? (e.g. ice delivery, more small notes)" maxLength={255} value={reason} onChange={(e) => setReason(e.target.value)}
-        className="rounded-lg border border-[var(--line)] bg-transparent px-3 py-2.5" />
-      {error && <p role="alert" className="rounded-lg bg-[var(--danger-bg)] p-2 text-sm text-[var(--danger)]">{error}</p>}
+      <input inputMode="decimal" aria-label="Amount" placeholder={cur === "USD" ? "5.00" : "20000"} value={typed} onChange={(e) => setTyped(e.target.value)} className={`${inputClass} h-14 text-xl font-semibold tabular-nums`} />
+      <input aria-label="What for" placeholder="What for? (e.g. ice delivery, more small notes)" maxLength={255} value={reason} onChange={(e) => setReason(e.target.value)} className={inputClass} />
+      {error && <Alert>{error}</Alert>}
       <div className="grid grid-cols-2 gap-2">
-        <button type="button" onClick={onCancel} className="rounded-xl border border-[var(--line)] px-3 py-2.5 font-semibold">Cancel</button>
-        <button type="submit" disabled={busy || !amount || reason.trim() === ""} className="rounded-xl bg-[var(--brand)] px-3 py-2.5 font-semibold text-white disabled:opacity-40">
+        <Button tone="neutral" onClick={onCancel}>
+          Cancel
+        </Button>
+        <Button type="submit" disabled={busy || !amount || reason.trim() === ""}>
           {busy ? "Saving..." : "Save"}
-        </button>
+        </Button>
       </div>
     </form>
   );
@@ -306,19 +364,20 @@ function CloseForm({ onCancel, onSave }: { onCancel: () => void; onSave: (usdCen
         e.preventDefault();
         if (cents !== null && riel !== null) void run(() => onSave(cents, riel, note.trim() || undefined));
       }}
-      className="flex flex-col gap-3 rounded-xl border border-[var(--line)] p-3"
+      className={FORM}
     >
-      <h3 className="font-semibold">Count the drawer and close</h3>
+      <h3 className="font-bold">Count the drawer and close</h3>
       <p className="text-sm text-[var(--muted)]">Count without looking at the expected amount, then save. Any difference is recorded for the owner.</p>
       <CashInputs usdValue={u} khrValue={k} onUsd={setU} onKhr={setK} />
-      <input aria-label="Note" placeholder="Note (optional)" maxLength={255} value={note} onChange={(e) => setNote(e.target.value)}
-        className="rounded-lg border border-[var(--line)] bg-transparent px-3 py-2.5" />
-      {error && <p role="alert" className="rounded-lg bg-[var(--danger-bg)] p-2 text-sm text-[var(--danger)]">{error}</p>}
+      <input aria-label="Note" placeholder="Note (optional)" maxLength={255} value={note} onChange={(e) => setNote(e.target.value)} className={inputClass} />
+      {error && <Alert>{error}</Alert>}
       <div className="grid grid-cols-2 gap-2">
-        <button type="button" onClick={onCancel} className="rounded-xl border border-[var(--line)] px-3 py-2.5 font-semibold">Cancel</button>
-        <button type="submit" disabled={busy || cents === null || riel === null} className="rounded-xl bg-[var(--fg)] px-3 py-2.5 font-semibold text-[var(--surface)] disabled:opacity-40">
+        <Button tone="neutral" onClick={onCancel}>
+          Cancel
+        </Button>
+        <Button type="submit" tone="dark" icon={Lock} disabled={busy || cents === null || riel === null}>
           {busy ? "Closing..." : "Close shift"}
-        </button>
+        </Button>
       </div>
     </form>
   );

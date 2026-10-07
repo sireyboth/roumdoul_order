@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { KeyRound, ShieldCheck } from "lucide-react";
+import { Alert, Button, inputClass } from "../ui";
 
 export type PinFields = { pin: string; reason: string; type: "percent" | "fixed"; value: number };
 
@@ -52,16 +54,31 @@ export default function PinForm({
   }
 
   return (
-    <form onSubmit={submit} className="flex flex-col gap-3 rounded-xl border border-[var(--line)] p-3">
-      <h3 className="font-semibold">{title}</h3>
-      {note && <p className="text-sm text-[var(--muted)]">{note}</p>}
+    <form
+      onSubmit={submit}
+      className={`anim-scale-in flex flex-col gap-3 rounded-3xl border p-4 ${danger ? "border-[var(--danger)]/30 bg-[var(--danger-bg)]/40" : "border-[var(--line)] bg-[var(--surface-2)]"}`}
+    >
+      <div className="flex items-start gap-3">
+        <span className={`grid size-10 shrink-0 place-items-center rounded-2xl ${danger ? "bg-[var(--danger-bg)] text-[var(--danger)]" : "bg-[var(--brand-soft)] text-[var(--brand)]"}`}>
+          <ShieldCheck className="size-5" aria-hidden />
+        </span>
+        <div className="min-w-0">
+          <h3 className="font-bold">{title}</h3>
+          {note ? <p className="text-sm text-[var(--muted)]">{note}</p> : <p className="text-sm text-[var(--muted)]">A manager must approve with their PIN.</p>}
+        </div>
+      </div>
 
       {withDiscount && (
         <div className="flex gap-2">
-          <span className="inline-flex shrink-0 rounded-lg bg-[var(--chip)] p-0.5 text-sm font-semibold">
+          <span className="inline-flex shrink-0 rounded-2xl bg-[var(--chip)] p-1 text-sm font-semibold">
             {(["percent", "fixed"] as const).map((t) => (
-              <button key={t} type="button" onClick={() => setType(t)} aria-pressed={type === t}
-                className={`rounded-md px-3 py-1.5 ${type === t ? "bg-[var(--surface)] shadow" : ""}`}>
+              <button
+                key={t}
+                type="button"
+                onClick={() => setType(t)}
+                aria-pressed={type === t}
+                className={`rounded-xl px-3.5 py-1.5 transition ${type === t ? "bg-[var(--surface)] shadow-soft" : "text-[var(--muted)]"}`}
+              >
                 {t === "percent" ? "%" : currency === "KHR" ? "៛" : "$"}
               </button>
             ))}
@@ -72,7 +89,7 @@ export default function PinForm({
             placeholder={type === "percent" ? "10" : currency === "KHR" ? "2000" : "1.50"}
             value={value}
             onChange={(e) => setValue(e.target.value)}
-            className="min-w-0 flex-1 rounded-lg border border-[var(--line)] bg-transparent px-3 py-2 tabular-nums"
+            className={`${inputClass} min-w-0 flex-1 tabular-nums`}
           />
         </div>
       )}
@@ -84,30 +101,34 @@ export default function PinForm({
           value={reason}
           maxLength={255}
           onChange={(e) => setReason(e.target.value)}
-          className="rounded-lg border border-[var(--line)] bg-transparent px-3 py-2"
+          className={inputClass}
         />
       )}
 
-      <input
-        type="password"
-        inputMode="numeric"
-        autoComplete="off"
-        aria-label="Manager PIN"
-        placeholder="Manager PIN"
-        value={pin}
-        maxLength={6}
-        onChange={(e) => setPin(e.target.value.replace(/\D/g, ""))}
-        className="rounded-lg border border-[var(--line)] bg-transparent px-3 py-2 tracking-widest"
-      />
+      <label className="relative">
+        <KeyRound className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-[var(--muted)]" aria-hidden />
+        <input
+          type="password"
+          inputMode="numeric"
+          autoComplete="off"
+          aria-label="Manager PIN"
+          placeholder="Manager PIN"
+          value={pin}
+          maxLength={6}
+          onChange={(e) => setPin(e.target.value.replace(/\D/g, ""))}
+          className={`${inputClass} pl-10 tracking-[0.3em]`}
+        />
+      </label>
 
-      {error && <p role="alert" className="rounded-lg bg-[var(--danger-bg)] p-2 text-sm text-[var(--danger)]">{error}</p>}
+      {error && <Alert>{error}</Alert>}
 
       <div className="grid grid-cols-2 gap-2">
-        <button type="button" onClick={onCancel} className="rounded-xl border border-[var(--line)] px-3 py-2.5 font-semibold">Cancel</button>
-        <button type="submit" disabled={!ready || busy}
-          className={`rounded-xl px-3 py-2.5 font-semibold text-white disabled:opacity-40 ${danger ? "bg-[var(--danger)]" : "bg-[var(--brand)]"}`}>
+        <Button tone="neutral" onClick={onCancel}>
+          Cancel
+        </Button>
+        <Button type="submit" tone={danger ? "danger" : "brand"} disabled={!ready || busy}>
           {busy ? "Saving..." : submitLabel}
-        </button>
+        </Button>
       </div>
     </form>
   );

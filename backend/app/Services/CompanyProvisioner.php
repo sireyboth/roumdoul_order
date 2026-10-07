@@ -25,7 +25,7 @@ class CompanyProvisioner
     private const RESERVED_SLUGS = ['profile', 'login', 'logout', 'register', 'new', 'password-reset', 'email-verification', 'tenant'];
 
     /**
-     * @param  array{name: string, slug?: string|null, phone?: string|null, currency?: string|null, branch_name?: string|null}  $data
+     * @param  array{name: string, slug?: string|null, phone?: string|null, currency?: string|null, branch_name?: string|null, logo_path?: string|null, cover_path?: string|null, tagline?: string|null}  $data
      */
     public function create(array $data, User $owner, ?string $planCode = null): Company
     {
@@ -34,6 +34,9 @@ class CompanyProvisioner
                 'name' => $data['name'],
                 'slug' => $this->uniqueSlug($data['slug'] ?? $data['name']),
                 'phone' => $data['phone'] ?? null,
+                'logo_path' => $data['logo_path'] ?? null,
+                'cover_path' => $data['cover_path'] ?? null,
+                'tagline' => ($data['tagline'] ?? null) ?: null,
                 'email' => $owner->email,
                 'currency' => $data['currency'] ?? 'USD',
                 'status' => CompanyStatus::Trial,

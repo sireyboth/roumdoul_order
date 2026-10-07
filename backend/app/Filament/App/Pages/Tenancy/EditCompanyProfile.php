@@ -26,12 +26,24 @@ class EditCompanyProfile extends EditTenantProfile
                     TextInput::make('name')->required()->maxLength(120),
                     TextInput::make('phone')->tel()->maxLength(30),
                     TextInput::make('email')->email()->maxLength(255),
+                    TextInput::make('tagline')
+                        ->label('Short description')
+                        ->placeholder('e.g. Coffee & brunch in BKK1')
+                        ->maxLength(120),
                     FileUpload::make('logo_path')
                         ->label('Logo')
+                        ->helperText('Shown at the top of your customer menu.')
                         ->image()
                         ->disk('public')
                         ->directory('logos')
                         ->maxSize(2048),
+                    FileUpload::make('cover_path')
+                        ->label('Cover photo')
+                        ->helperText('A wide photo of your shop or food, shown behind your name on the menu.')
+                        ->image()
+                        ->disk('public')
+                        ->directory('covers')
+                        ->maxSize(4096),
                     FileUpload::make('khqr_image_path')
                         ->label('KHQR code (picture)')
                         ->helperText('The KHQR your bank gave the shop. It is printed on bills so customers can scan and pay.')

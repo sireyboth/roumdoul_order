@@ -24,6 +24,8 @@ use App\Models\User;
 use Database\Seeders\DatabaseSeeder;
 use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
 use Tests\TestCase;
 
@@ -223,8 +225,23 @@ class BackOfficeFormsTest extends TestCase
         // /app/new is outside any restaurant, so no current tenant (as in the browser).
         Filament::setTenant(null, isQuiet: true);
 
+        Storage::fake('public');
+
+        // The logo is required.
         Livewire::test(RegisterCompany::class)
-            ->fillForm(['name' => 'Brown Coffee Test', 'branch_name' => 'Riverside', 'currency' => 'USD'])
+            ->fillForm(['name' => 'No Logo Café', 'branch_name' => 'Riverside', 'currency' => 'USD'])
+            ->call('register')
+            ->assertHasFormErrors(['logo_path' => 'required']);
+
+        Livewire::test(RegisterCompany::class)
+            ->fillForm([
+                'name' => 'Brown Coffee Test',
+                'logo_path' => UploadedFile::fake()->image('logo.png', 200, 200),
+                'cover_path' => UploadedFile::fake()->image('cover.jpg', 1200, 500),
+                'tagline' => 'Coffee & brunch by the river',
+                'branch_name' => 'Riverside',
+                'currency' => 'USD',
+            ])
             ->call('register')
             ->assertHasNoFormErrors();
 
@@ -232,5 +249,67 @@ class BackOfficeFormsTest extends TestCase
         $this->assertSame('trial', $company->status->value);
         $this->assertSame('Riverside', $company->branches()->value('name'));
         $this->assertTrue($newOwner->canAccessTenant($company));
+        $this->assertSame('Coffee & brunch by the river', $company->tagline);
+        $this->assertStringStartsWith('logos/', $company->logo_path);
+        $this->assertStringStartsWith('covers/', $company->cover_path);
+        Storage::disk('public')->assertExists([$company->logo_path, $company->cover_path]);
+        $this->assertFalse(Company::query()->where('name', 'No Logo Café')->exists());
+    }
+
+    public function test_menu_item_suggestions_are_saved_in_order_and_bump_the_menu(): void
+    {
+        $latte = MenuItem::query()->where('name_en', 'Iced latte')->firstOrFail();
+        $rice = MenuItem::query()->where('name_en', 'Fried rice')->firstOrFail();
+        $noodles = MenuItem::query()->where('name_en', 'Khmer rice noodles')->firstOrFail();
+        $version = $this->company->fresh()->menu_version;
+
+        Livewire::test(EditMenuItem::class, ['record' => $latte->id])
+            ->fillForm(['suggestions' => [$noodles->id, $rice->id]])
+            ->call('save')
+            ->assertHasNoFormErrors();
+
+        $this->assertSame([$noodles->id, $rice->id], $latte->fresh()->suggestions->pluck('id')->all());
+        $this->assertGreaterThan($version, $this->company->fresh()->menu_version);
+
+        // At most 3.
+        $others = MenuItem::query()->where('company_id', $this->company->id)->whereKeyNot($latte->id)->limit(4)->pluck('id')->all();
+        Livewire::test(EditMenuItem::class, ['record' => $latte->id])
+            ->fillForm(['suggestions' => $others])
+            ->call('save')
+            ->assertHasFormErrors(['suggestions']);
+
+        // A new item can get suggestions straight away.
+        Livewire::test(CreateMenuItem::class)
+            ->fillForm([
+                'name_km' => 'នំខេក',
+                'name_en' => 'Cake',
+                'category_id' => $this->company->categories()->value('id'),
+                'price' => '1.50',
+                'station' => 'kitchen',
+                'suggestions' => [$latte->id],
+            ])
+            ->call('create')
+            ->assertHasNoFormErrors();
+
+        $this->assertSame([$latte->id], MenuItem::query()->where('name_en', 'Cake')->firstOrFail()->suggestions->pluck('id')->all());
+    }
+
+    public function test_menu_item_suggestions_from_another_restaurant_cannot_be_chosen(): void
+    {
+        Filament::setTenant(null, isQuiet: true);
+        $other = Company::query()->create(['name' => 'Other Café', 'slug' => 'other-cafe']);
+        $category = Category::query()->create(['company_id' => $other->id, 'name_km' => 'ផឹក', 'name_en' => 'Drinks']);
+        $foreign = MenuItem::query()->create([
+            'company_id' => $other->id, 'category_id' => $category->id, 'name_km' => 'ទឹក', 'name_en' => 'Foreign water', 'price' => 100,
+        ]);
+        Filament::setTenant($this->company);
+
+        $latte = MenuItem::query()->where('name_en', 'Iced latte')->firstOrFail();
+
+        Livewire::test(EditMenuItem::class, ['record' => $latte->id])
+            ->fillForm(['suggestions' => [$foreign->id]])
+            ->call('save');
+
+        $this->assertFalse($latte->fresh()->suggestions->contains('id', $foreign->id));
     }
 }

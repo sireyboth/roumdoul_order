@@ -1,10 +1,26 @@
 "use client";
 
-import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  Ban,
+  BellRing,
+  Check,
+  CheckCheck,
+  Clock,
+  ConciergeBell,
+  Flame,
+  HandPlatter,
+  LayoutGrid,
+  PackageX,
+  Receipt,
+  Volume2,
+  type LucideIcon,
+} from "lucide-react";
 import { chime, since, staffApi, type BoardOrder, type BoardRequest } from "@/lib/staff";
 import type { Names } from "@/lib/types";
 import { useBoard } from "./use-board";
+import { Alert, Badge, Button } from "../ui";
+import { BackLink, PAGE, SignedOutScreen } from "./chrome";
 
 type MenuRow = { menu_item_id: number; name: Names; category: string | null; sold_out: boolean };
 
@@ -55,131 +71,232 @@ export default function WaiterBoard({ branchId }: { branchId: number }) {
     }
   }
 
-  if (signedOut) {
-    return (
-      <main className="grid min-h-dvh place-items-center p-6">
-        <Link href="/staff" className="rounded-xl bg-[var(--brand)] px-5 py-3 font-semibold text-white">Sign in again</Link>
-      </main>
-    );
-  }
+  if (signedOut) return <SignedOutScreen />;
 
   const requests = board?.requests ?? [];
   const ready = (board?.orders ?? []).filter((o) => o.status === "ready");
   const cooking = (board?.orders ?? []).filter((o) => ["placed", "accepted", "preparing"].includes(o.status));
+  const attention = requests.length + ready.length;
 
   return (
-    <main className="mx-auto flex min-h-dvh max-w-xl flex-col gap-4 px-4 pb-10">
-      <header className="sticky top-0 z-10 -mx-4 flex flex-wrap items-center gap-2 border-b border-[var(--line)] bg-[var(--surface)] px-4 py-3">
-        <Link href="/staff" className="text-sm text-[var(--muted)]">← Screens</Link>
-        <h1 className="font-semibold">Waiter</h1>
-        <div className="ml-auto flex gap-1 rounded-full bg-[var(--chip)] p-1 text-sm">
-          <button type="button" onClick={() => setTab("floor")} className={`rounded-full px-3 py-1 ${tab === "floor" ? "bg-[var(--surface)] font-semibold shadow" : ""}`}>
-            Tables {requests.length + ready.length > 0 && <span className="ml-1 rounded-full bg-[var(--danger)] px-1.5 text-xs text-white">{requests.length + ready.length}</span>}
-          </button>
-          <button type="button" onClick={() => setTab("menu")} className={`rounded-full px-3 py-1 ${tab === "menu" ? "bg-[var(--surface)] font-semibold shadow" : ""}`}>
-            Sold out
-          </button>
+    <main className="flex min-h-dvh flex-col pb-12">
+      <header className="sticky top-0 z-20 border-b border-[var(--line)] bg-[var(--surface)]/85 backdrop-blur-md">
+        <div className={`${PAGE} flex flex-wrap items-center gap-3 py-3`}>
+          <BackLink />
+          <span className="grid size-10 place-items-center rounded-2xl bg-[var(--brand-soft)] text-[var(--brand)]">
+            <ConciergeBell className="size-5" aria-hidden />
+          </span>
+          <h1 className="text-xl font-bold tracking-tight">Waiter</h1>
+
+          <div className="ml-auto flex flex-wrap items-center gap-2">
+            <div className="flex gap-1 rounded-2xl bg-[var(--chip)] p-1 text-sm font-semibold" role="tablist">
+              <TabButton active={tab === "floor"} onClick={() => setTab("floor")} icon={LayoutGrid}>
+                Tables
+                {attention > 0 && <span className="anim-pop ml-0.5 rounded-full bg-[var(--danger)] px-1.5 text-xs text-white tabular-nums">{attention}</span>}
+              </TabButton>
+              <TabButton active={tab === "menu"} onClick={() => setTab("menu")} icon={PackageX}>
+                Sold out
+              </TabButton>
+            </div>
+          </div>
         </div>
         {!soundOn && (
-          <button
-            type="button"
-            onClick={() => {
-              audio.current ??= new AudioContext();
-              void audio.current.resume();
-              chime(audio.current);
-              setSoundOn(true);
-            }}
-            className="w-full rounded-lg bg-amber-300 px-3 py-1.5 text-sm font-semibold text-black"
-          >
-            🔔 Turn on sound for calls
-          </button>
+          <div className={`${PAGE} pb-3`}>
+            <button
+              type="button"
+              onClick={() => {
+                audio.current ??= new AudioContext();
+                void audio.current.resume();
+                chime(audio.current);
+                setSoundOn(true);
+              }}
+              className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[var(--accent)] px-4 py-2.5 text-sm font-bold text-[#2b1d06] transition hover:brightness-105 active:scale-[0.99]"
+            >
+              <BellRing className="anim-wiggle size-4" aria-hidden />
+              Turn on sound for calls
+            </button>
+          </div>
         )}
       </header>
 
-      {(error || actionError) && (
-        <p role="alert" className="rounded-lg bg-[var(--danger-bg)] p-3 text-sm text-[var(--danger)]">{actionError ?? error}</p>
-      )}
+      <div className={`${PAGE} mt-6 flex flex-col gap-6`}>
+        {(error || actionError) && <Alert>{actionError ?? error}</Alert>}
+        {soundOn && (
+          <p className="anim-fade-in -mb-2 flex items-center gap-1.5 text-xs text-[var(--muted)]">
+            <Volume2 className="size-3.5" aria-hidden /> Sound is on for calls and ready orders.
+          </p>
+        )}
 
-      {tab === "floor" ? (
-        <>
-          <Section title="Calls" count={requests.length} empty="No one is calling">
-            {requests.map((r: BoardRequest) => (
-              <Row key={r.id} tone={r.type === "bill" ? "brand" : "warn"}>
+        {tab === "floor" ? (
+          <div className="grid gap-6 lg:grid-cols-3">
+            <Section title="Calls" icon={BellRing} count={requests.length} tone="warn" empty="No one is calling" loading={!board}>
+              {requests.map((r: BoardRequest, i) => {
+                const bill = r.type === "bill";
+                return (
+                  <Row key={r.id} tone={bill ? "brand" : "warn"} index={i}>
+                    <span className={`grid size-11 shrink-0 place-items-center rounded-2xl ${bill ? "bg-[var(--brand-soft)] text-[var(--brand)]" : "anim-ring bg-[var(--warn-bg)] text-[var(--warn)]"}`}>
+                      {bill ? <Receipt className="size-5" aria-hidden /> : <BellRing className="size-5" aria-hidden />}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xl leading-tight font-bold">{r.table ?? "—"}</p>
+                      <p className="flex items-center gap-1 text-sm text-[var(--muted)]">
+                        {bill ? "Wants the bill" : "Calling waiter"} · <Clock className="size-3.5" aria-hidden /> {since(r.created_at, now).label} ago
+                      </p>
+                    </div>
+                    <Button icon={Check} disabled={busy === `r${r.id}`} onClick={() => act(`r${r.id}`, `requests/${r.id}/done`)}>
+                      Done
+                    </Button>
+                  </Row>
+                );
+              })}
+            </Section>
+
+            <Section title="Ready to serve" icon={HandPlatter} count={ready.length} tone="brand" empty="Nothing waiting" loading={!board}>
+              {ready.map((o: BoardOrder, i) => (
+                <Row key={o.id} tone="ok" index={i}>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xl leading-tight font-bold">
+                      {o.table ?? "—"} <span className="text-sm font-medium text-[var(--muted)]">#{o.number}</span>
+                    </p>
+                    <p className="text-sm text-[var(--muted)]">{o.items.map((it) => `${it.quantity}× ${it.name.en}`).join(", ")}</p>
+                  </div>
+                  <Button icon={CheckCheck} disabled={busy === `o${o.id}`} onClick={() => act(`o${o.id}`, `orders/${o.id}/status`, { status: "served" })}>
+                    Served
+                  </Button>
+                </Row>
+              ))}
+            </Section>
+
+            <Section title="Being prepared" icon={Flame} count={cooking.length} tone="neutral" empty="Kitchen is clear" loading={!board}>
+              {cooking.map((o: BoardOrder, i) => (
+                <Row key={o.id} index={i}>
+                  <div className="min-w-0 flex-1">
+                    <p className="flex flex-wrap items-center gap-2 font-semibold">
+                      {o.table ?? "—"} <span className="text-sm font-medium text-[var(--muted)]">#{o.number}</span>
+                      <Badge tone={o.status === "preparing" ? "warn" : "neutral"} className="capitalize">{o.status}</Badge>
+                    </p>
+                    <p className="text-sm text-[var(--muted)]">{o.items.map((it) => `${it.quantity}× ${it.name.en}`).join(", ")}</p>
+                  </div>
+                  <span className="flex items-center gap-1 text-sm text-[var(--muted)] tabular-nums">
+                    <Clock className="size-3.5" aria-hidden />
+                    {since(o.placed_at, now).label}
+                  </span>
+                </Row>
+              ))}
+            </Section>
+          </div>
+        ) : (
+          <Section
+            title="Tap to mark sold out for today"
+            icon={PackageX}
+            count={menu?.filter((m) => m.sold_out).length ?? 0}
+            tone="danger"
+            empty="The menu is empty"
+            loading={!menu}
+            grid
+          >
+            {(menu ?? []).map((m, i) => (
+              <Row key={m.menu_item_id} tone={m.sold_out ? "danger" : undefined} index={i}>
                 <div className="min-w-0 flex-1">
-                  <p className="text-lg font-bold">{r.table ?? "—"}</p>
-                  <p className="text-sm">{r.type === "bill" ? "💵 Wants the bill" : "🛎️ Calling waiter"} · {since(r.created_at, now).label} ago</p>
+                  <p className={`font-semibold ${m.sold_out ? "text-[var(--muted)] line-through" : ""}`}>{m.name.km || m.name.en}</p>
+                  <p className="truncate text-sm text-[var(--muted)]">
+                    {m.name.en} · {m.category}
+                  </p>
                 </div>
-                <button type="button" disabled={busy === `r${r.id}`} onClick={() => act(`r${r.id}`, `requests/${r.id}/done`)}
-                  className="rounded-lg bg-[var(--brand)] px-4 py-2.5 font-semibold text-white disabled:opacity-50">Done</button>
+                <Button
+                  size="sm"
+                  tone={m.sold_out ? "danger" : "neutral"}
+                  icon={m.sold_out ? Ban : Check}
+                  disabled={busy === `m${m.menu_item_id}`}
+                  onClick={() => act(`m${m.menu_item_id}`, `branches/${branchId}/menu/${m.menu_item_id}/sold-out`, { sold_out: !m.sold_out }, loadMenu)}
+                >
+                  {m.sold_out ? "Sold out" : "Available"}
+                </Button>
               </Row>
             ))}
           </Section>
-
-          <Section title="Ready to serve" count={ready.length} empty="Nothing waiting">
-            {ready.map((o: BoardOrder) => (
-              <Row key={o.id} tone="ok">
-                <div className="min-w-0 flex-1">
-                  <p className="text-lg font-bold">{o.table ?? "—"} <span className="text-sm font-medium text-[var(--muted)]">#{o.number}</span></p>
-                  <p className="text-sm">{o.items.map((i) => `${i.quantity}× ${i.name.en}`).join(", ")}</p>
-                </div>
-                <button type="button" disabled={busy === `o${o.id}`} onClick={() => act(`o${o.id}`, `orders/${o.id}/status`, { status: "served" })}
-                  className="rounded-lg bg-[var(--brand)] px-4 py-2.5 font-semibold text-white disabled:opacity-50">Served</button>
-              </Row>
-            ))}
-          </Section>
-
-          <Section title="Being prepared" count={cooking.length} empty="Kitchen is clear">
-            {cooking.map((o: BoardOrder) => (
-              <Row key={o.id}>
-                <div className="min-w-0 flex-1">
-                  <p className="font-semibold">{o.table ?? "—"} <span className="text-sm font-medium text-[var(--muted)]">#{o.number} · {o.status}</span></p>
-                  <p className="text-sm text-[var(--muted)]">{o.items.map((i) => `${i.quantity}× ${i.name.en}`).join(", ")}</p>
-                </div>
-                <span className="text-sm tabular-nums text-[var(--muted)]">{since(o.placed_at, now).label}</span>
-              </Row>
-            ))}
-          </Section>
-        </>
-      ) : (
-        <Section title="Tap to mark sold out for today" count={menu?.filter((m) => m.sold_out).length ?? 0} empty="Loading menu...">
-          {(menu ?? []).map((m) => (
-            <Row key={m.menu_item_id} tone={m.sold_out ? "danger" : undefined}>
-              <div className="min-w-0 flex-1">
-                <p className="font-medium">{m.name.km || m.name.en}</p>
-                <p className="text-sm text-[var(--muted)]">{m.name.en} · {m.category}</p>
-              </div>
-              <button
-                type="button"
-                disabled={busy === `m${m.menu_item_id}`}
-                onClick={() => act(`m${m.menu_item_id}`, `branches/${branchId}/menu/${m.menu_item_id}/sold-out`, { sold_out: !m.sold_out }, loadMenu)}
-                className={`rounded-lg px-3 py-2 text-sm font-semibold disabled:opacity-50 ${m.sold_out ? "bg-[var(--danger)] text-white" : "border border-[var(--line)]"}`}
-              >
-                {m.sold_out ? "Sold out" : "Available"}
-              </button>
-            </Row>
-          ))}
-        </Section>
-      )}
+        )}
+      </div>
     </main>
   );
 }
 
-function Section({ title, count, empty, children }: { title: string; count: number; empty: string; children: React.ReactNode }) {
+function TabButton({ active, onClick, icon: Icon, children }: { active: boolean; onClick: () => void; icon: LucideIcon; children: React.ReactNode }) {
+  return (
+    <button
+      type="button"
+      role="tab"
+      aria-selected={active}
+      onClick={onClick}
+      className={`flex items-center gap-1.5 rounded-xl px-3 py-1.5 transition ${active ? "bg-[var(--surface)] text-[var(--fg)] shadow-soft" : "text-[var(--muted)] hover:text-[var(--fg)]"}`}
+    >
+      <Icon className="size-4" aria-hidden />
+      {children}
+    </button>
+  );
+}
+
+const SECTION_TONES = {
+  warn: "bg-[var(--warn-bg)] text-[var(--warn)]",
+  brand: "bg-[var(--brand-soft)] text-[var(--brand)]",
+  neutral: "bg-[var(--chip)] text-[var(--muted)]",
+  danger: "bg-[var(--danger-bg)] text-[var(--danger)]",
+} as const;
+
+function Section({
+  title,
+  icon: Icon,
+  count,
+  tone,
+  empty,
+  loading,
+  grid,
+  children,
+}: {
+  title: string;
+  icon: LucideIcon;
+  count: number;
+  tone: keyof typeof SECTION_TONES;
+  empty: string;
+  loading?: boolean;
+  grid?: boolean;
+  children: React.ReactNode;
+}) {
   const hasChildren = Array.isArray(children) ? children.length > 0 : Boolean(children);
   return (
-    <section className="flex flex-col gap-2">
-      <h2 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-[var(--muted)]">
-        {title} <span className="rounded-full bg-[var(--chip)] px-2 tabular-nums">{count}</span>
+    <section className="flex min-w-0 flex-col gap-3">
+      <h2 className="flex items-center gap-2.5 text-sm font-bold tracking-wide text-[var(--muted)] uppercase">
+        <span className={`grid size-8 place-items-center rounded-xl ${SECTION_TONES[tone]}`}>
+          <Icon className="size-4" aria-hidden />
+        </span>
+        {title}
+        <span className="rounded-full bg-[var(--chip)] px-2.5 py-0.5 text-[var(--fg)] tabular-nums">{count}</span>
       </h2>
-      {hasChildren ? children : <p className="rounded-lg bg-[var(--chip)] p-3 text-sm text-[var(--muted)]">{empty}</p>}
+      {loading ? (
+        <div className={grid ? "grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4" : "flex flex-col gap-3"}>
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="skeleton h-20 rounded-2xl" />
+          ))}
+        </div>
+      ) : hasChildren ? (
+        <div className={grid ? "grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4" : "flex flex-col gap-3"}>{children}</div>
+      ) : (
+        <div className="anim-fade-in flex items-center gap-3 rounded-2xl border border-dashed border-[var(--line)] px-4 py-6 text-sm text-[var(--muted)]">
+          <Icon className="size-5 opacity-60" aria-hidden />
+          {empty}
+        </div>
+      )}
     </section>
   );
 }
 
-function Row({ children, tone }: { children: React.ReactNode; tone?: "warn" | "ok" | "brand" | "danger" }) {
-  const border = { warn: "border-l-amber-400", ok: "border-l-emerald-500", brand: "border-l-[var(--brand)]", danger: "border-l-[var(--danger)]" }[tone ?? "warn"];
+function Row({ children, tone, index = 0 }: { children: React.ReactNode; tone?: "warn" | "ok" | "brand" | "danger"; index?: number }) {
+  const border = { warn: "border-l-[var(--accent)]", ok: "border-l-[var(--brand)]", brand: "border-l-[var(--brand)]", danger: "border-l-[var(--danger)]" }[tone ?? "warn"];
   return (
-    <div className={`flex items-center gap-3 rounded-lg border border-[var(--line)] border-l-4 p-3 ${tone ? border : "border-l-[var(--line)]"}`}>
+    <div
+      style={{ "--i": Math.min(index, 10) } as React.CSSProperties}
+      className={`anim-fade-up flex items-center gap-3 rounded-2xl border border-l-4 border-[var(--line)] bg-[var(--surface)] p-3.5 shadow-soft transition hover:shadow-card ${tone ? border : "border-l-[var(--line)]"}`}
+    >
       {children}
     </div>
   );

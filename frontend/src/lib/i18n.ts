@@ -47,6 +47,16 @@ const text = {
   bill: { km: "វិក្កយបត្រ", en: "Bill" },
   paid: { km: "បានបង់", en: "Paid" },
   leftToPay: { km: "នៅសល់ត្រូវបង់", en: "Left to pay" },
+  search: { km: "ស្វែងរកម្ហូប ភេសជ្ជៈ...", en: "Search food, drinks..." },
+  noResults: { km: "រកមិនឃើញទេ", en: "Nothing matches your search" },
+  menu: { km: "ម៉ឺនុយ", en: "Menu" },
+  goesWellWith: { km: "ញ៉ាំជាមួយនេះក៏ឆ្ងាញ់ដែរ", en: "Goes well with" },
+  addedToOrder: { km: "បានបន្ថែមទៅការកុម្ម៉ង់", en: "Added to your order" },
+  noThanks: { km: "ទេ អរគុណ", en: "No thanks" },
+  youMightLike: { km: "អ្នកប្រហែលជាចូលចិត្ត", en: "You might also like" },
+  orderSent: { km: "បានផ្ញើការកុម្ម៉ង់!", en: "Order sent!" },
+  orderSentText: { km: "ផ្ទះបាយបានទទួលហើយ។ តាមដានការកុម្ម៉ង់របស់អ្នកនៅខាងក្រោម។", en: "The kitchen has it. Follow your order below." },
+  cartEmptyText: { km: "ជ្រើសម្ហូបពីម៉ឺនុយ ដើម្បីចាប់ផ្តើម", en: "Pick something from the menu to start" },
 } satisfies Record<string, Record<Lang, string>>;
 
 export function t(key: keyof typeof text, lang: Lang): string {

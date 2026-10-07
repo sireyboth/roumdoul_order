@@ -1,9 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import { ArrowRightLeft, Banknote, CircleCheck, CreditCard, QrCode, type LucideIcon } from "lucide-react";
 import type { BillDetail } from "@/lib/staff";
 import { newKey } from "@/lib/table-api";
 import { cashPreview, formatMoney, parseAmount } from "@/lib/money";
+import { Alert, inputClass } from "../ui";
 
 type Method = "cash" | "khqr" | "card";
 
@@ -16,6 +18,12 @@ export type PayBody = {
   change_currency?: "USD" | "KHR";
   reference?: string;
 };
+
+const METHODS: { value: Method; label: string; icon: LucideIcon }[] = [
+  { value: "cash", label: "Cash", icon: Banknote },
+  { value: "khqr", label: "KHQR", icon: QrCode },
+  { value: "card", label: "Card", icon: CreditCard },
+];
 
 const QUICK = {
   USD: [500, 1000, 2000, 5000],
@@ -65,29 +73,32 @@ export default function PayPanel({ bill, onPay }: { bill: BillDetail; onPay: (bo
   }
 
   return (
-    <section className="flex flex-col gap-3 rounded-xl border border-[var(--line)] p-3">
-      <div className="grid grid-cols-3 gap-1 rounded-lg bg-[var(--chip)] p-1 text-sm font-semibold">
-        {(["cash", "khqr", "card"] as Method[]).map((m) => (
+    <section className="flex flex-col gap-4 rounded-3xl border border-[var(--line)] bg-[var(--surface-2)] p-4">
+      <div className="grid grid-cols-3 gap-1 rounded-2xl bg-[var(--chip)] p-1 text-sm font-semibold" role="tablist" aria-label="Payment method">
+        {METHODS.map(({ value: m, label, icon: Icon }) => (
           <button
             key={m}
             type="button"
+            role="tab"
+            aria-selected={method === m}
             onClick={() => {
               setMethod(m);
               setTyped("");
               setError(null);
               fresh();
             }}
-            className={`rounded-md py-2 ${method === m ? "bg-[var(--surface)] shadow" : ""}`}
+            className={`flex items-center justify-center gap-1.5 rounded-xl py-2.5 transition ${method === m ? "bg-[var(--surface)] text-[var(--fg)] shadow-soft" : "text-[var(--muted)] hover:text-[var(--fg)]"}`}
           >
-            {m === "cash" ? "💵 Cash" : m === "khqr" ? "📱 KHQR" : "💳 Card"}
+            <Icon className="size-4" aria-hidden />
+            {label}
           </button>
         ))}
       </div>
 
       {method === "cash" ? (
-        <>
+        <div key="cash" className="anim-fade-in flex flex-col gap-3">
           <div className="flex items-center gap-2 text-sm">
-            <span className="text-[var(--muted)]">Customer gives</span>
+            <span className="font-medium text-[var(--muted)]">Customer gives</span>
             <Toggle value={cashCurrency} onChange={(c) => { setCashCurrency(c); setChangeCurrency(c); setTyped(""); fresh(); }} />
           </div>
           <input
@@ -96,26 +107,34 @@ export default function PayPanel({ bill, onPay }: { bill: BillDetail; onPay: (bo
             placeholder={cashCurrency === "KHR" ? "e.g. 50000" : "e.g. 20.00"}
             value={typed}
             onChange={(e) => { setTyped(e.target.value); fresh(); }}
-            className="rounded-lg border border-[var(--line)] bg-transparent px-3 py-3 text-2xl font-semibold tabular-nums"
+            className={`${inputClass} h-16 text-3xl font-bold tabular-nums`}
           />
           <div className="flex flex-wrap gap-2">
-            <button type="button" onClick={() => { setTyped(cashCurrency === "KHR" ? String(dueInCash) : (dueInCash / 100).toFixed(2)); fresh(); }}
-              className="rounded-full bg-[var(--brand-soft)] px-3 py-1.5 text-sm font-semibold text-[var(--brand)]">
+            <button
+              type="button"
+              onClick={() => { setTyped(cashCurrency === "KHR" ? String(dueInCash) : (dueInCash / 100).toFixed(2)); fresh(); }}
+              className="rounded-full bg-[var(--brand-soft)] px-3.5 py-2 text-sm font-semibold text-[var(--brand-strong)] transition hover:brightness-95 active:scale-95"
+            >
               Exact {money(dueInCash, cashCurrency)}
             </button>
             {QUICK[cashCurrency].filter((n) => n > dueInCash).slice(0, 3).map((n) => (
-              <button key={n} type="button" onClick={() => { setTyped(cashCurrency === "KHR" ? String(n) : String(n / 100)); fresh(); }}
-                className="rounded-full bg-[var(--chip)] px-3 py-1.5 text-sm font-medium">
+              <button
+                key={n}
+                type="button"
+                onClick={() => { setTyped(cashCurrency === "KHR" ? String(n) : String(n / 100)); fresh(); }}
+                className="rounded-full border border-[var(--line)] bg-[var(--surface)] px-3.5 py-2 text-sm font-semibold tabular-nums transition hover:bg-[var(--chip)] active:scale-95"
+              >
                 {money(n, cashCurrency)}
               </button>
             ))}
           </div>
           {preview && preview.change > 0 && (
-            <div className="flex items-center justify-between rounded-lg bg-[var(--chip)] px-3 py-2">
-              <span className="flex items-center gap-2 text-sm">
+            <div className="anim-scale-in flex items-center justify-between gap-3 rounded-2xl bg-[var(--accent-soft)] px-4 py-3">
+              <span className="flex items-center gap-2 text-sm font-semibold text-[var(--warn)]">
+                <ArrowRightLeft className="size-4" aria-hidden />
                 Change in <Toggle value={changeCurrency} onChange={(c) => { setChangeCurrency(c); fresh(); }} />
               </span>
-              <strong className="text-xl tabular-nums">{money(preview.change, changeCurrency)}</strong>
+              <strong className="text-2xl tabular-nums">{money(preview.change, changeCurrency)}</strong>
             </div>
           )}
           {preview && preview.applied < bill.remaining && (
@@ -123,38 +142,38 @@ export default function PayPanel({ bill, onPay }: { bill: BillDetail; onPay: (bo
               Part payment: {money(preview.applied)} now, {money(bill.remaining - preview.applied)} still to pay.
             </p>
           )}
-        </>
+        </div>
       ) : (
-        <>
-          <label className="flex flex-col gap-1 text-sm">
+        <div key="other" className="anim-fade-in flex flex-col gap-3">
+          <label className="flex flex-col gap-1.5 text-sm">
             <span className="text-[var(--muted)]">Amount (leave empty for everything left: {money(bill.remaining)})</span>
             <input
               inputMode="decimal"
               placeholder={bill.currency === "KHR" ? String(bill.remaining) : (bill.remaining / 100).toFixed(2)}
               value={typed}
               onChange={(e) => { setTyped(e.target.value); fresh(); }}
-              className="rounded-lg border border-[var(--line)] bg-transparent px-3 py-2.5 text-lg tabular-nums"
+              className={`${inputClass} h-14 text-xl font-semibold tabular-nums`}
             />
           </label>
           {method === "khqr" && (
-            <label className="flex flex-col gap-1 text-sm">
+            <label className="flex flex-col gap-1.5 text-sm">
               <span className="text-[var(--muted)]">Transaction reference (optional, from the bank app)</span>
-              <input value={reference} onChange={(e) => { setReference(e.target.value.slice(0, 100)); fresh(); }}
-                className="rounded-lg border border-[var(--line)] bg-transparent px-3 py-2.5" />
+              <input value={reference} onChange={(e) => { setReference(e.target.value.slice(0, 100)); fresh(); }} className={inputClass} />
             </label>
           )}
-          {tooMuch && <p className="text-sm text-[var(--danger)]">That is more than the bill. Only cash can give change.</p>}
-        </>
+          {tooMuch && <p className="text-sm font-medium text-[var(--danger)]">That is more than the bill. Only cash can give change.</p>}
+        </div>
       )}
 
-      {error && <p role="alert" className="rounded-lg bg-[var(--danger-bg)] p-2 text-sm text-[var(--danger)]">{error}</p>}
+      {error && <Alert>{error}</Alert>}
 
       <button
         type="button"
         disabled={busy || (method === "cash" ? !tendered : tooMuch || partAmount === null)}
         onClick={submit}
-        className="rounded-xl bg-[var(--brand)] px-4 py-3.5 text-lg font-semibold text-white disabled:opacity-40"
+        className="flex h-14 items-center justify-center gap-2 rounded-2xl bg-[var(--brand)] px-4 text-lg font-bold text-white shadow-soft transition hover:bg-[var(--brand-strong)] active:scale-[0.98] disabled:opacity-40 dark:text-[#06140f]"
       >
+        <CircleCheck className="size-5" aria-hidden />
         {busy
           ? "Saving..."
           : method === "cash"
@@ -171,8 +190,13 @@ function Toggle({ value, onChange }: { value: "USD" | "KHR"; onChange: (v: "USD"
   return (
     <span className="inline-flex rounded-full bg-[var(--chip)] p-0.5 text-sm font-semibold">
       {(["USD", "KHR"] as const).map((c) => (
-        <button key={c} type="button" onClick={() => onChange(c)} aria-pressed={value === c}
-          className={`rounded-full px-3 py-1 ${value === c ? "bg-[var(--brand)] text-white" : ""}`}>
+        <button
+          key={c}
+          type="button"
+          onClick={() => onChange(c)}
+          aria-pressed={value === c}
+          className={`rounded-full px-3 py-1 transition ${value === c ? "bg-[var(--brand)] text-white shadow-soft dark:text-[#06140f]" : "text-[var(--muted)] hover:text-[var(--fg)]"}`}
+        >
           {c === "USD" ? "$" : "៛"}
         </button>
       ))}

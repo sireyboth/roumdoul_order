@@ -25,6 +25,8 @@ export type MenuItem = {
   price: number;
   sold_out_until: string | null;
   option_groups: OptionGroup[];
+  /** "Goes well with": ids of other menu items the owner suggests after this one is added. */
+  suggestions?: number[];
 };
 
 export type Category = {
@@ -38,6 +40,8 @@ export type TableMenu = {
   company: {
     name: string;
     logo_url: string | null;
+    cover_url?: string | null;
+    tagline?: string | null;
     currency: "USD" | "KHR";
     khr_per_usd: number;
     vat_bp: number;

@@ -13,8 +13,10 @@ plans ─< subscriptions >─ companies ─< company_user >─ users
   branches                 categories ─< menu_items        audit_logs
      │                     option_groups ─< options
      │                     menu_items >─< option_groups (menu_item_option_group)
+     │                     menu_items >─< menu_items (menu_item_suggestions, "Goes well with")
      ├─< branch_user >─ users
      ├─< table_areas ─< dining_tables (qr_token)
+     ├─< floor_plans (one per branch × area; objects JSON points at dining_tables)
      ├─< branch_menu_items >─ menu_items
      ├─< table_sessions ─< orders ─< order_items >─ menu_items
      │        │
@@ -82,7 +84,9 @@ A restaurant business = Filament tenant. Holds currency, riel rate, VAT/service 
 | `slug` | varchar |  |  |  |
 | `email` | varchar | yes |  |  |
 | `phone` | varchar | yes |  |  |
-| `logo_path` | varchar | yes |  |  |
+| `logo_path` | varchar | yes |  | required at sign-up; top of the customer menu |
+| `cover_path` | varchar | yes |  | wide photo behind the name on the customer menu |
+| `tagline` | varchar(120) | yes |  | short line under the name, e.g. "Coffee & brunch in BKK1" |
 | `khqr_image_path` | varchar | yes |  | the shop's static KHQR picture, printed on unpaid bills (B4) |
 | `timezone` | varchar |  | Asia/Phnom_Penh |  |
 | `currency` | varchar |  | USD |  |
@@ -230,6 +234,25 @@ A table and its random `qr_token` (the only thing a customer's phone knows). Reg
 
 Indexes: `UNIQUE (branch_id, name)`, `UNIQUE (qr_token)`
 
+### `floor_plans`
+
+The drawn table layout of one floor of a branch, for the staff screens (`GET|PUT /api/staff/branches/{id}/floor-plan`). One row per (branch, area); `table_area_id` null = "Main floor". Uniqueness is kept in code (`FloorPlan::forFloor`), because a unique index does not treat NULLs as equal. A dining table stands on at most one floor of its branch: saving a floor removes its tables from the branch's other floors. Seats set on a table object are copied to `dining_tables.seats` (0 = not set).
+
+| Column | Type | Null | Default | References |
+|---|---|---|---|---|
+| `id` | integer |  |  |  |
+| `company_id` | integer |  |  | companies.id (cascade) |
+| `branch_id` | integer |  |  | branches.id (cascade) |
+| `table_area_id` | integer | yes |  | table_areas.id (set null) |
+| `floor` | varchar(20) |  | wood | wood, tile, stone, carpet, grass, concrete |
+| `width` | integer |  | 1200 | canvas size, 400–4000 |
+| `height` | integer |  | 800 | 300–4000 |
+| `objects` | json |  |  | `[{id, kind, x, y, w, h, rotation, table_id, seats, label, color}]`, max 400; `kind` = table_square, table_round, table_long, booth (these carry `table_id`), bar_counter, cashier, kitchen, wall, door, window, plant, pillar, rug, sofa, stairs, restroom, divider, stool, chair, lamp |
+| `created_at` | datetime | yes |  |  |
+| `updated_at` | datetime | yes |  |  |
+
+Indexes: `(branch_id, table_area_id)`
+
 ## Menu
 
 ### `categories`
@@ -320,6 +343,21 @@ Which option groups an item uses, in order.
 | `menu_item_id` | integer |  |  | menu_items.id (cascade) |
 | `option_group_id` | integer |  |  | option_groups.id (cascade) |
 | `sort_order` | integer |  | 0 |  |
+
+### `menu_item_suggestions`
+
+"Goes well with" (Step 2 upsell, basic version): after a customer adds `menu_item_id`, the menu offers `suggested_item_id` in a small pop-up, in `sort_order`. Up to 3 per item, chosen on the menu item form. Pivot changes fire no model events, so the form calls `bumpMenuVersion()` after saving. The public menu lists only suggestions that are on that branch's menu.
+
+| Column | Type | Null | Default | References |
+|---|---|---|---|---|
+| `id` | integer |  |  |  |
+| `menu_item_id` | integer |  |  | menu_items.id (cascade) |
+| `suggested_item_id` | integer |  |  | menu_items.id (cascade) |
+| `sort_order` | integer |  | 0 |  |
+| `created_at` | datetime | yes |  |  |
+| `updated_at` | datetime | yes |  |  |
+
+Indexes: `UNIQUE (menu_item_id, suggested_item_id)`
 
 ### `branch_menu_items`
 
@@ -610,7 +648,7 @@ UNIQUE `(branch_id, business_date, menu_item_id)`, index `(company_id, business_
 
 | Feature | Tables |
 |---|---|
-| Upsell suggestions | `menu_item_suggestions (menu_item_id, suggested_item_id, sort_order)` |
+| Upsell suggestions | basic `menu_item_suggestions` built (see Menu); still planned: special price on the suggestion, shown/accepted counts for reports |
 | Combo / set menus | `menu_items.type` (`single`/`combo`) + `combo_components (combo_item_id, menu_item_id, quantity, group, extra_price)` |
 | Customer feedback | `feedbacks (bill_id unique, rating 1-5, comment, created_at)` |
 | Multi-language | `name_zh` on `option_groups`/`options`; `companies.languages` JSON |
