@@ -19,6 +19,7 @@ roumdoul_order/
 - `docs/architecture.md` – how the parts connect and how data flows
 - `docs/database.md` – every table and column, plus planned tables
 - `docs/roadmap.md` – what is done and what comes next
+- `docs/user-guide.md` – how to use the system, role by role, plus troubleshooting
 - `docs/step2-features.md` – how each Step 2 feature will work
 - Online diagrams: https://claude.ai/artifact/XFXdQJczECUWxJoNUX5Rvi (private to the owner)
 
