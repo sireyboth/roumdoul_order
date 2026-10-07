@@ -6,8 +6,8 @@ use App\Enums\OrderStatus;
 use App\Filament\App\Resources\Orders\Pages\ListOrders;
 use App\Filament\App\Resources\Orders\Pages\ViewOrder;
 use App\Models\Order;
+use App\Support\BranchScope;
 use App\Support\Money;
-use App\Support\TenantScope;
 use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Actions\ViewAction;
@@ -40,6 +40,12 @@ class OrderResource extends Resource
     protected static ?int $navigationSort = 0;
 
     protected static ?string $recordTitleAttribute = 'number';
+
+    /** Managers see only their own branches; owners see all (BranchScope). */
+    public static function getEloquentQuery(): Builder
+    {
+        return BranchScope::apply(parent::getEloquentQuery(), 'branch_id');
+    }
 
     public static function canCreate(): bool
     {
@@ -80,7 +86,7 @@ class OrderResource extends Resource
             ])
             ->filters([
                 SelectFilter::make('status')->options(OrderStatus::class)->multiple(),
-                SelectFilter::make('branch')->relationship('branch', 'name', fn (Builder $query) => TenantScope::apply($query)),
+                SelectFilter::make('branch')->relationship('branch', 'name', fn (Builder $query) => BranchScope::branches($query)),
                 Filter::make('business_date')
                     ->schema([DatePicker::make('date')->label('Business day')])
                     ->query(fn (Builder $query, array $data) => $query->when($data['date'] ?? null, fn ($q, $date) => $q->whereDate('business_date', $date))),

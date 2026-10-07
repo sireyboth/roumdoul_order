@@ -4,6 +4,7 @@ namespace App\Filament\App\Widgets;
 
 use App\Models\DailyItemSale;
 use App\Services\Reports\SalesReport;
+use App\Support\BranchScope;
 use App\Support\Money;
 use App\Support\Tenant;
 use Filament\Tables\Columns\TextColumn;
@@ -23,11 +24,11 @@ class BestSellers extends TableWidget
     public function table(Table $table): Table
     {
         $company = Tenant::current();
-        $today = $company ? (new SalesReport($company))->today() : now()->toDateString();
+        $today = $company ? (new SalesReport($company, BranchScope::ids()))->today() : now()->toDateString();
 
         return $table
             ->query(
-                DailyItemSale::query()
+                BranchScope::apply(DailyItemSale::query())
                     // Widgets are not scoped by Filament tenancy: always filter by company here.
                     ->where('company_id', $company?->id ?? 0)
                     ->whereDate('business_date', '>=', Carbon::parse($today)->subDays(6)->toDateString())

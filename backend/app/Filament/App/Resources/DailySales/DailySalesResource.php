@@ -3,11 +3,12 @@
 namespace App\Filament\App\Resources\DailySales;
 
 use App\Filament\App\Resources\DailySales\Pages\ListDailySales;
+use App\Models\Branch;
 use App\Models\DailyBranchSale;
 use App\Services\Reports\CsvExport;
+use App\Support\BranchScope;
 use App\Support\Money;
 use App\Support\Tenant;
-use App\Support\TenantScope;
 use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Forms\Components\DatePicker;
@@ -39,6 +40,12 @@ class DailySalesResource extends Resource
 
     protected static ?string $pluralModelLabel = 'daily sales';
 
+    /** Managers see only their own branches; owners see all (BranchScope). */
+    public static function getEloquentQuery(): Builder
+    {
+        return BranchScope::apply(parent::getEloquentQuery(), 'branch_id');
+    }
+
     public static function canCreate(): bool
     {
         return false;
@@ -60,9 +67,9 @@ class DailySalesResource extends Resource
                 Select::make('branch_id')
                     ->label('Branch')
                     ->placeholder('All branches')
-                    ->options(fn () => Tenant::current()?->branches()->pluck('name', 'id') ?? []),
+                    ->options(fn () => BranchScope::branches(Branch::query())->orderBy('sort_order')->pluck('name', 'id')),
             ])
-            ->action(fn (array $data) => (new CsvExport(Tenant::current()))->download(
+            ->action(fn (array $data) => (new CsvExport(Tenant::current(), BranchScope::ids()))->download(
                 $type,
                 substr((string) $data['from'], 0, 10),
                 substr((string) $data['to'], 0, 10),
@@ -94,7 +101,7 @@ class DailySalesResource extends Resource
                 TextColumn::make('cancelled_count')->label('Cancelled orders')->numeric()->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
-                SelectFilter::make('branch')->relationship('branch', 'name', fn (Builder $query) => TenantScope::apply($query)),
+                SelectFilter::make('branch')->relationship('branch', 'name', fn (Builder $query) => BranchScope::branches($query)),
                 Filter::make('dates')
                     ->schema([
                         DatePicker::make('from')->label('From'),

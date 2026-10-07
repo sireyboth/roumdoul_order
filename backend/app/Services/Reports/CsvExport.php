@@ -20,7 +20,18 @@ class CsvExport
 {
     public const TYPES = ['orders' => 'Orders', 'payments' => 'Payments', 'items' => 'Items sold'];
 
-    public function __construct(private Company $company) {}
+    /** @param  array<int, int>|null  $branchIds  null = every branch (owners); otherwise only these */
+    public function __construct(private Company $company, private ?array $branchIds = null) {}
+
+    /** The branches one export may include: the picked one (if allowed) or all allowed. @return array<int, int>|null */
+    private function branches(?int $picked): ?array
+    {
+        if ($picked === null) {
+            return $this->branchIds;
+        }
+
+        return $this->branchIds === null || in_array($picked, $this->branchIds, true) ? [$picked] : [];
+    }
 
     public function download(string $type, string $from, string $to, ?int $branchId = null): StreamedResponse
     {
@@ -51,7 +62,7 @@ class CsvExport
             ->where('company_id', $this->company->id)
             ->whereDate('business_date', '>=', $from)
             ->whereDate('business_date', '<=', $to)
-            ->when($branchId, fn ($q) => $q->where('branch_id', $branchId))
+            ->when($this->branches($branchId) !== null, fn ($q) => $q->whereIn('branch_id', $this->branches($branchId)))
             ->with(['items', 'branch', 'table'])
             ->orderBy('business_date')
             ->orderBy('number');
@@ -82,7 +93,7 @@ class CsvExport
             ->where('company_id', $this->company->id)
             ->whereDate('business_date', '>=', $from)
             ->whereDate('business_date', '<=', $to)
-            ->when($branchId, fn ($q) => $q->where('branch_id', $branchId))
+            ->when($this->branches($branchId) !== null, fn ($q) => $q->whereIn('branch_id', $this->branches($branchId)))
             ->with(['branch', 'bill.session.table', 'receivedBy'])
             ->orderBy('paid_at');
 
@@ -119,7 +130,7 @@ class CsvExport
             ->where('company_id', $this->company->id)
             ->whereDate('business_date', '>=', $from)
             ->whereDate('business_date', '<=', $to)
-            ->when($branchId, fn ($q) => $q->where('branch_id', $branchId))
+            ->when($this->branches($branchId) !== null, fn ($q) => $q->whereIn('branch_id', $this->branches($branchId)))
             ->with('branch')
             ->orderBy('business_date')
             ->orderByDesc('quantity');

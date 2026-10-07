@@ -6,8 +6,8 @@ use App\Filament\App\Resources\Shifts\Pages\ListShifts;
 use App\Filament\App\Resources\Shifts\Pages\ViewShift;
 use App\Models\Shift;
 use App\Services\Billing\ShiftService;
+use App\Support\BranchScope;
 use App\Support\Money;
-use App\Support\TenantScope;
 use BackedEnum;
 use Filament\Actions\ViewAction;
 use Filament\Infolists\Components\RepeatableEntry;
@@ -33,6 +33,12 @@ class ShiftResource extends Resource
     protected static string|UnitEnum|null $navigationGroup = 'Restaurant';
 
     protected static ?int $navigationSort = 1;
+
+    /** Managers see only their own branches; owners see all (BranchScope). */
+    public static function getEloquentQuery(): Builder
+    {
+        return BranchScope::apply(parent::getEloquentQuery(), 'branch_id');
+    }
 
     public static function canCreate(): bool
     {
@@ -79,7 +85,7 @@ class ShiftResource extends Resource
             ])
             ->filters([
                 SelectFilter::make('status')->options(['open' => 'Open', 'closed' => 'Closed']),
-                SelectFilter::make('branch')->relationship('branch', 'name', fn (Builder $query) => TenantScope::apply($query)),
+                SelectFilter::make('branch')->relationship('branch', 'name', fn (Builder $query) => BranchScope::branches($query)),
             ])
             ->recordActions([
                 ViewAction::make(),

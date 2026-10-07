@@ -5,6 +5,7 @@ namespace App\Filament\App\Widgets;
 use App\Models\Order;
 use App\Models\TableSession;
 use App\Services\Reports\SalesReport;
+use App\Support\BranchScope;
 use App\Support\Money;
 use App\Support\Tenant;
 use Filament\Widgets\StatsOverviewWidget;
@@ -26,7 +27,7 @@ class SalesOverview extends StatsOverviewWidget
             return [];
         }
 
-        $report = new SalesReport($company);
+        $report = new SalesReport($company, BranchScope::ids());
         $today = $report->today();
         $week = $report->days(Carbon::parse($today)->subDays(6)->toDateString(), $today);
         $before = $report->total(Carbon::parse($today)->subDays(13)->toDateString(), Carbon::parse($today)->subDays(7)->toDateString());
@@ -35,7 +36,7 @@ class SalesOverview extends StatsOverviewWidget
         $money = fn (int $minor) => Money::format($minor, $company->currency);
 
         // Live, not from the report copy: tables with an open visit and what they have ordered so far.
-        $open = TableSession::query()->where('company_id', $company->id)->where('status', '!=', 'closed')->pluck('id');
+        $open = BranchScope::apply(TableSession::query()->where('company_id', $company->id))->where('status', '!=', 'closed')->pluck('id');
         $unpaid = (int) Order::query()->whereIn('table_session_id', $open)->where('status', '!=', 'cancelled')->sum('subtotal');
 
         $change = $before['net'] > 0 ? (int) round(($weekNet - $before['net']) * 100 / $before['net']) : null;

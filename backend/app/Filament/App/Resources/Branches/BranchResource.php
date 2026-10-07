@@ -8,6 +8,7 @@ use App\Filament\App\Resources\Branches\Pages\ListBranches;
 use App\Filament\App\Resources\Branches\RelationManagers\AreasRelationManager;
 use App\Filament\App\Resources\Branches\RelationManagers\MenuAvailabilityRelationManager;
 use App\Models\Branch;
+use App\Support\BranchScope;
 use App\Support\Tenant;
 use BackedEnum;
 use Filament\Actions\EditAction;
@@ -22,6 +23,7 @@ use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Columns\ToggleColumn;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Validation\Rules\Unique;
 use UnitEnum;
 
@@ -37,9 +39,15 @@ class BranchResource extends Resource
 
     protected static ?string $recordTitleAttribute = 'name';
 
+    /** Managers see only their own branches; owners see all (BranchScope). */
+    public static function getEloquentQuery(): Builder
+    {
+        return BranchScope::apply(parent::getEloquentQuery(), 'id');
+    }
+
     public static function canCreate(): bool
     {
-        return ! (Tenant::current()?->hasReachedLimit('branches') ?? true);
+        return BranchScope::seesAllBranches() && ! (Tenant::current()?->hasReachedLimit('branches') ?? true);
     }
 
     public static function form(Schema $schema): Schema

@@ -60,6 +60,7 @@ Demo logins (password `password`): `owner@roumdoul.test` (/app, manager PIN `123
    - Back office: Filament tenancy scopes resources via each model's `company()` relation (trait `BelongsToCompany`). Relationship `Select` fields and filters must be scoped explicitly with `TenantScope::apply($query)`.
    - Public API: company/branch come **only** from the table token (`MenuBuilder::resolveTable`).
    - Staff API: every endpoint calls `StaffAccess::authorize($user, $branch, $roles)`.
+   - **Branches:** owners see every branch; everyone else only the branches ticked on the Staff page (`branch_user`; a one-branch restaurant needs none). Back-office resources with `branch_id` override `getEloquentQuery()` with `BranchScope::apply()`, branch pickers use `BranchScope::branches()`, reports take `BranchScope::ids()`. Any new branch screen must do the same.
 4. **Idempotency:** order (and later payment) creation takes an `idempotency_key`; a retry returns the existing record.
 5. **Order status** changes only via `Order::moveTo()`; allowed moves live in `App\Enums\OrderStatus::canMoveTo()`. Cancel requires a reason and writes the audit log.
 6. **Menu cache:** never cache a menu without the version in the key; models using `BumpsMenuVersion` bump it on change. If you change option groups of an item via a pivot, call `bumpMenuVersion()` yourself.

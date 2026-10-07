@@ -3,6 +3,7 @@
 namespace App\Filament\App\Widgets;
 
 use App\Services\Reports\SalesReport;
+use App\Support\BranchScope;
 use App\Support\Money;
 use App\Support\Tenant;
 use Filament\Widgets\ChartWidget;
@@ -25,7 +26,7 @@ class PaymentMethodsChart extends ChartWidget
             return ['datasets' => [], 'labels' => []];
         }
 
-        $report = new SalesReport($company);
+        $report = new SalesReport($company, BranchScope::ids());
         $today = $report->today();
         $total = $report->total(Carbon::parse($today)->subDays(6)->toDateString(), $today);
         $methods = ['cash' => 'Cash', 'khqr' => 'KHQR', 'card' => 'Card', 'other' => 'Other'];

@@ -13,12 +13,15 @@ class SalesReport
 {
     private const FIELDS = ['net', 'gross', 'discounts', 'refunds', 'bills_count', 'orders_count', 'cancelled_count', 'items_count', 'cash', 'khqr', 'card', 'other'];
 
-    public function __construct(private Company $company) {}
+    /** @param  array<int, int>|null  $branchIds  null = every branch (owners); otherwise only these */
+    public function __construct(private Company $company, private ?array $branchIds = null) {}
 
     /** "Today" for the company: the latest business date among its branches (each branch has its own cutoff). */
     public function today(): string
     {
-        $dates = $this->company->branches()->get()
+        $dates = $this->company->branches()
+            ->when($this->branchIds !== null, fn ($q) => $q->whereIn('id', $this->branchIds))
+            ->get()
             ->map(fn (Branch $b) => $b->setRelation('company', $this->company)->businessDate());
 
         return $dates->max() ?? now($this->company->timezone)->toDateString();
@@ -33,6 +36,7 @@ class SalesReport
     {
         $rows = DailyBranchSale::query()
             ->where('company_id', $this->company->id)
+            ->when($this->branchIds !== null, fn ($q) => $q->whereIn('branch_id', $this->branchIds))
             ->whereDate('business_date', '>=', $from)
             ->whereDate('business_date', '<=', $to)
             ->get()

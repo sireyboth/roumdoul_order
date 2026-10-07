@@ -189,7 +189,7 @@ Indexes: `UNIQUE (company_id, code)`, `(coreos_branch_id)`
 
 ### `branch_user`
 
-Optional: limits a staff member to some branches. No rows = all branches.
+Which branches a non-owner works at (ticked on the Staff page). Owners never need rows and always see every branch. In a restaurant with one branch, rows are not needed; when the second branch is added, staff without rows are put on the first branch. Enforced by `AppSupportStaffAccess` (staff screens, live updates) and `AppSupportBranchScope` (back office, reports, exports).
 
 | Column | Type | Null | Default | References |
 |---|---|---|---|---|

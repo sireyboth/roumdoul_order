@@ -3,11 +3,12 @@
 namespace App\Filament\App\Resources\DiningTables;
 
 use App\Filament\App\Resources\DiningTables\Pages\ListDiningTables;
+use App\Models\Branch;
 use App\Models\DiningTable;
 use App\Models\TableArea;
+use App\Support\BranchScope;
 use App\Support\QrCode;
 use App\Support\Tenant;
-use App\Support\TenantScope;
 use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
@@ -49,6 +50,12 @@ class DiningTableResource extends Resource
 
     protected static ?string $recordTitleAttribute = 'name';
 
+    /** Managers see only their own branches; owners see all (BranchScope). */
+    public static function getEloquentQuery(): Builder
+    {
+        return BranchScope::apply(parent::getEloquentQuery(), 'branch_id');
+    }
+
     public static function canCreate(): bool
     {
         return ! (Tenant::current()?->hasReachedLimit('tables') ?? true);
@@ -60,8 +67,8 @@ class DiningTableResource extends Resource
         return [
             Select::make('branch_id')
                 ->label('Branch')
-                ->relationship('branch', 'name', fn (Builder $query) => TenantScope::apply($query))
-                ->default(fn () => Tenant::current()?->branches()->orderBy('sort_order')->value('id'))
+                ->relationship('branch', 'name', fn (Builder $query) => BranchScope::branches($query))
+                ->default(fn () => BranchScope::branches(Branch::query())->orderBy('sort_order')->value('id'))
                 ->required()
                 ->live()
                 ->afterStateUpdated(fn (Set $set) => $set('table_area_id', null)),
@@ -107,7 +114,7 @@ class DiningTableResource extends Resource
             ])
             ->filters([
                 SelectFilter::make('branch')
-                    ->relationship('branch', 'name', fn (Builder $query) => TenantScope::apply($query)),
+                    ->relationship('branch', 'name', fn (Builder $query) => BranchScope::branches($query)),
             ])
             ->recordActions([
                 Action::make('qr')

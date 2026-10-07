@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\StaffRole;
 use App\Models\Concerns\Auditable;
 use App\Models\Concerns\BelongsToCompany;
 use App\Services\MenuSync;
@@ -10,6 +11,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 
 class Branch extends Model
 {
@@ -36,6 +38,25 @@ class Branch extends Model
     {
         // A new branch starts with the whole company menu available.
         static::created(fn (self $branch) => app(MenuSync::class)->ensureRowsForBranch($branch));
+
+        // The second branch: everyone who worked at the only branch so far stays there
+        // (without this, branch limits would start with nobody assigned anywhere).
+        static::created(function (self $branch) {
+            $others = self::query()->where('company_id', $branch->company_id)->whereKeyNot($branch->id)->pluck('id');
+
+            if ($others->count() !== 1) {
+                return;
+            }
+
+            $assigned = DB::table('branch_user')->whereIn('branch_id', $others)->pluck('user_id');
+
+            Membership::query()
+                ->where('company_id', $branch->company_id)
+                ->where('role', '!=', StaffRole::Owner->value)
+                ->whereNotIn('user_id', $assigned)
+                ->pluck('user_id')
+                ->each(fn ($userId) => DB::table('branch_user')->insert(['branch_id' => $others->first(), 'user_id' => $userId]));
+        });
     }
 
     public function tableAreas(): HasMany
