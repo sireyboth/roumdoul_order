@@ -56,6 +56,33 @@ const text = {
   youMightLike: { km: "អ្នកប្រហែលជាចូលចិត្ត", en: "You might also like" },
   orderSent: { km: "បានផ្ញើការកុម្ម៉ង់!", en: "Order sent!" },
   orderSentText: { km: "ផ្ទះបាយបានទទួលហើយ។ តាមដានការកុម្ម៉ង់របស់អ្នកនៅខាងក្រោម។", en: "The kitchen has it. Follow your order below." },
+  locTitle: { km: "សូមបើកទីតាំង", en: "Share your location" },
+  locTitleFar: { km: "អ្នកនៅក្រៅហាង", en: "Outside the shop" },
+  locTitleProblem: { km: "រកទីតាំងមិនបាន", en: "Location not available" },
+  locWhy: {
+    km: "ហាងនេះទទួលការកុម្ម៉ង់តែពីភ្ញៀវនៅក្នុងហាងប៉ុណ្ណោះ។ ទូរស័ព្ទរបស់អ្នកនឹងផ្ញើទីតាំងម្តង ដើម្បីបញ្ជាក់ថាអ្នកនៅទីនេះ។",
+    en: "This shop only takes orders from guests inside. Your phone shares its location once to confirm you are here.",
+  },
+  locAllow: { km: "អនុញ្ញាត និងបន្ត", en: "Allow and continue" },
+  locChecking: { km: "កំពុងពិនិត្យទីតាំង...", en: "Checking your location..." },
+  locDenied: {
+    km: "ទីតាំងត្រូវបានបិទ។ សូមបើកការអនុញ្ញាតទីតាំងសម្រាប់គេហទំព័រនេះ (ចុចរូបសោរនៅលើរបារអាសយដ្ឋាន) ហើយព្យាយាមម្តងទៀត។",
+    en: "Location is blocked. Allow location for this page (tap the lock icon next to the address), then try again.",
+  },
+  locUnavailable: {
+    km: "រកទីតាំងមិនឃើញទេ។ សូមបើក GPS / Location នៅលើទូរស័ព្ទ ហើយព្យាយាមម្តងទៀត។",
+    en: "Your location could not be found. Turn on Location (GPS) on your phone and try again.",
+  },
+  locTooFar: {
+    km: "អ្នកហាក់ដូចជានៅក្រៅហាង។ ការកុម្ម៉ង់អាចផ្ញើបានតែពីក្នុងហាងប៉ុណ្ណោះ។ ប្រសិនបើអ្នកនៅទីនេះ សូមព្យាយាមម្តងទៀត ឬសួរបុគ្គលិក។",
+    en: "You seem to be outside the shop. Orders can only be sent from inside. If you are here, try again or ask a staff member.",
+  },
+  locInsecure: {
+    km: "ទំព័រនេះមិនអាចសួរទីតាំងបានទេ។ សូមសួរបុគ្គលិក។",
+    en: "This page cannot ask for your location. Please ask a staff member.",
+  },
+  tryAgainBtn: { km: "ព្យាយាមម្តងទៀត", en: "Try again" },
+  askStaff: { km: "ឬហៅបុគ្គលិកដោយផ្ទាល់ — គេអាចកុម្ម៉ង់ឱ្យអ្នកបាន។", en: "Or wave to a staff member: they can order for you." },
   cartEmptyText: { km: "ជ្រើសម្ហូបពីម៉ឺនុយ ដើម្បីចាប់ផ្តើម", en: "Pick something from the menu to start" },
 } satisfies Record<string, Record<Lang, string>>;
 

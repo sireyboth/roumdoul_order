@@ -4,14 +4,13 @@ namespace Tests\Feature;
 
 use App\Filament\App\Pages\Tenancy\EditCompanyProfile;
 use App\Filament\App\Pages\Tenancy\RegisterCompany;
-use App\Filament\App\Resources\Branches\Pages\CreateBranch;
-use App\Filament\App\Resources\Branches\Pages\EditBranch;
+use App\Filament\App\Resources\Branches\Pages\ListBranches;
+use App\Filament\App\Resources\Branches\Pages\ViewBranch;
 use App\Filament\App\Resources\Branches\RelationManagers\AreasRelationManager;
 use App\Filament\App\Resources\Branches\RelationManagers\MenuAvailabilityRelationManager;
 use App\Filament\App\Resources\Categories\Pages\ListCategories;
 use App\Filament\App\Resources\DiningTables\Pages\ListDiningTables;
-use App\Filament\App\Resources\MenuItems\Pages\CreateMenuItem;
-use App\Filament\App\Resources\MenuItems\Pages\EditMenuItem;
+use App\Filament\App\Resources\MenuItems\Pages\ListMenuItems;
 use App\Filament\App\Resources\OptionGroups\Pages\ListOptionGroups;
 use App\Filament\App\Resources\Staff\Pages\ListStaff;
 use App\Models\Branch;
@@ -52,14 +51,27 @@ class BackOfficeFormsTest extends TestCase
         Filament::bootCurrentPanel();
     }
 
-    public function test_create_pages_render(): void
+    public function test_create_and_edit_open_in_modals(): void
     {
-        foreach (['/branches/create', '/menu-items/create'] as $path) {
-            $this->get('/app/demo-cafe'.$path)->assertOk();
-        }
-
         $item = $this->company->menuItems()->firstOrFail();
-        $this->get("/app/demo-cafe/menu-items/{$item->id}/edit")->assertOk();
+        $branch = $this->company->branches()->firstOrFail();
+
+        // No separate create/edit pages any more: they are modals on the list.
+        $this->get('/app/demo-cafe/menu-items/create')->assertNotFound();
+        $this->get("/app/demo-cafe/menu-items/{$item->id}/edit")->assertNotFound();
+
+        Livewire::test(ListMenuItems::class)->mountAction('create')->assertActionMounted('create');
+        Livewire::test(ListMenuItems::class)
+            ->mountTableAction('edit', $item)
+            ->assertTableActionDataSet(['name_en' => $item->name_en]);
+        Livewire::test(ListBranches::class)->mountAction('create')->assertActionMounted('create');
+        Livewire::test(ListBranches::class)
+            ->mountTableAction('edit', $branch)
+            // "Business day ends" is a clock time: 04:00 must show as 04:00, not shifted to Phnom Penh time.
+            ->assertTableActionDataSet(['name' => $branch->name, 'day_ends_at' => '04:00']);
+
+        // The branch's areas and menu still have their own screen.
+        $this->get("/app/demo-cafe/branches/{$branch->id}")->assertOk()->assertSee('Areas &amp; menu', false);
     }
 
     public function test_owner_creates_a_menu_item_with_options_and_price_in_dollars(): void
@@ -67,8 +79,8 @@ class BackOfficeFormsTest extends TestCase
         $category = $this->company->categories()->firstOrFail();
         $size = OptionGroup::query()->where('name_en', 'Size')->firstOrFail();
 
-        Livewire::test(CreateMenuItem::class)
-            ->fillForm([
+        Livewire::test(ListMenuItems::class)
+            ->callAction('create', [
                 'name_km' => 'កាពូឈីណូ',
                 'name_en' => 'Cappuccino',
                 'category_id' => $category->id,
@@ -76,8 +88,7 @@ class BackOfficeFormsTest extends TestCase
                 'station' => 'bar',
                 'optionGroups' => [$size->id],
             ])
-            ->call('create')
-            ->assertHasNoFormErrors();
+            ->assertHasNoActionErrors();
 
         $item = MenuItem::query()->where('name_en', 'Cappuccino')->firstOrFail();
         $this->assertSame(275, $item->price);
@@ -85,11 +96,12 @@ class BackOfficeFormsTest extends TestCase
         $this->assertSame([$size->id], $item->optionGroups->pluck('id')->all());
         $this->assertSame(1, $item->branchSettings()->count(), 'Available in the branch automatically');
 
-        Livewire::test(EditMenuItem::class, ['record' => $item->id])
-            ->assertFormSet(['price' => 2.75])
-            ->fillForm(['price' => '3'])
-            ->call('save')
-            ->assertHasNoFormErrors();
+        Livewire::test(ListMenuItems::class)
+            ->mountTableAction('edit', $item)
+            ->assertTableActionDataSet(['price' => 2.75])
+            ->setTableActionData(['price' => '3'])
+            ->callMountedTableAction()
+            ->assertHasNoTableActionErrors();
 
         $this->assertSame(300, $item->fresh()->price);
     }
@@ -121,21 +133,20 @@ class BackOfficeFormsTest extends TestCase
 
     public function test_branch_create_edit_areas_and_menu_availability(): void
     {
-        Livewire::test(CreateBranch::class)
-            ->fillForm(['name' => 'Toul Kork', 'code' => 'TK', 'day_ends_at' => '03:00'])
-            ->call('create')
-            ->assertHasNoFormErrors();
+        Livewire::test(ListBranches::class)
+            ->callAction('create', ['name' => 'Toul Kork', 'code' => 'TK', 'day_ends_at' => '03:00'])
+            ->assertHasNoActionErrors();
 
         $branch = Branch::query()->where('code', 'TK')->firstOrFail();
         $this->assertSame($this->company->menuItems()->count(), $branch->menuItems()->count());
 
-        Livewire::test(AreasRelationManager::class, ['ownerRecord' => $branch, 'pageClass' => EditBranch::class])
+        Livewire::test(AreasRelationManager::class, ['ownerRecord' => $branch, 'pageClass' => ViewBranch::class])
             ->callTableAction('create', data: ['name' => 'Garden'])
             ->assertHasNoTableActionErrors();
         $this->assertSame($this->company->id, $branch->tableAreas()->firstOrFail()->company_id);
 
         $row = $branch->menuItems()->firstOrFail();
-        Livewire::test(MenuAvailabilityRelationManager::class, ['ownerRecord' => $branch, 'pageClass' => EditBranch::class])
+        Livewire::test(MenuAvailabilityRelationManager::class, ['ownerRecord' => $branch, 'pageClass' => ViewBranch::class])
             ->assertCanSeeTableRecords([$row])
             ->callTableAction('soldOut', $row)
             ->assertHasNoTableActionErrors();
@@ -190,14 +201,13 @@ class BackOfficeFormsTest extends TestCase
     {
         $branch = $this->company->branches()->firstOrFail();
 
-        Livewire::test(EditBranch::class, ['record' => $branch->getRouteKey()])
-            ->fillForm([
+        Livewire::test(ListBranches::class)
+            ->callTableAction('edit', $branch, [
                 'receipt_header' => 'VAT TIN K001-123456789',
                 'receipt_footer' => 'សូមអរគុណ! Thank you!',
                 'auto_print_kitchen' => true,
             ])
-            ->call('save')
-            ->assertHasNoFormErrors();
+            ->assertHasNoTableActionErrors();
 
         $branch->refresh();
         $this->assertSame('VAT TIN K001-123456789', $branch->receipt_header);
@@ -263,24 +273,22 @@ class BackOfficeFormsTest extends TestCase
         $noodles = MenuItem::query()->where('name_en', 'Khmer rice noodles')->firstOrFail();
         $version = $this->company->fresh()->menu_version;
 
-        Livewire::test(EditMenuItem::class, ['record' => $latte->id])
-            ->fillForm(['suggestions' => [$noodles->id, $rice->id]])
-            ->call('save')
-            ->assertHasNoFormErrors();
+        Livewire::test(ListMenuItems::class)
+            ->callTableAction('edit', $latte, ['suggestions' => [$noodles->id, $rice->id]])
+            ->assertHasNoTableActionErrors();
 
         $this->assertSame([$noodles->id, $rice->id], $latte->fresh()->suggestions->pluck('id')->all());
         $this->assertGreaterThan($version, $this->company->fresh()->menu_version);
 
         // At most 3.
         $others = MenuItem::query()->where('company_id', $this->company->id)->whereKeyNot($latte->id)->limit(4)->pluck('id')->all();
-        Livewire::test(EditMenuItem::class, ['record' => $latte->id])
-            ->fillForm(['suggestions' => $others])
-            ->call('save')
-            ->assertHasFormErrors(['suggestions']);
+        Livewire::test(ListMenuItems::class)
+            ->callTableAction('edit', $latte, ['suggestions' => $others])
+            ->assertHasTableActionErrors(['suggestions']);
 
         // A new item can get suggestions straight away.
-        Livewire::test(CreateMenuItem::class)
-            ->fillForm([
+        Livewire::test(ListMenuItems::class)
+            ->callAction('create', [
                 'name_km' => 'នំខេក',
                 'name_en' => 'Cake',
                 'category_id' => $this->company->categories()->value('id'),
@@ -288,8 +296,7 @@ class BackOfficeFormsTest extends TestCase
                 'station' => 'kitchen',
                 'suggestions' => [$latte->id],
             ])
-            ->call('create')
-            ->assertHasNoFormErrors();
+            ->assertHasNoActionErrors();
 
         $this->assertSame([$latte->id], MenuItem::query()->where('name_en', 'Cake')->firstOrFail()->suggestions->pluck('id')->all());
     }
@@ -306,9 +313,8 @@ class BackOfficeFormsTest extends TestCase
 
         $latte = MenuItem::query()->where('name_en', 'Iced latte')->firstOrFail();
 
-        Livewire::test(EditMenuItem::class, ['record' => $latte->id])
-            ->fillForm(['suggestions' => [$foreign->id]])
-            ->call('save');
+        Livewire::test(ListMenuItems::class)
+            ->callTableAction('edit', $latte, ['suggestions' => [$foreign->id]]);
 
         $this->assertFalse($latte->fresh()->suggestions->contains('id', $foreign->id));
     }

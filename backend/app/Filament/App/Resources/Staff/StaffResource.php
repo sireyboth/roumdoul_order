@@ -165,8 +165,8 @@ class StaffResource extends Resource
             ->modifyQueryUsing(fn (Builder $query) => $query->with('user'))
             ->columns([
                 TextColumn::make('user.name')->label('Name')->searchable()->weight('bold'),
-                TextColumn::make('user.email')->label('Email')->searchable(),
-                TextColumn::make('user.phone')->label('Phone')->placeholder('—'),
+                TextColumn::make('user.email')->label('Email')->searchable()->visibleFrom('md'),
+                TextColumn::make('user.phone')->label('Phone')->placeholder('—')->visibleFrom('xl'),
                 TextColumn::make('role')->badge(),
                 TextColumn::make('branches')
                     ->label('Branches')
@@ -179,7 +179,8 @@ class StaffResource extends Resource
 
                         return $names->isEmpty() ? 'None: cannot work anywhere' : $names->implode(', ');
                     })
-                    ->color(fn ($state) => str_starts_with((string) $state, 'None') ? 'danger' : null),
+                    ->color(fn ($state) => str_starts_with((string) $state, 'None') ? 'danger' : null)
+                    ->visibleFrom('lg'),
                 ToggleColumn::make('is_active')
                     ->label('Active')
                     ->disabled(fn (Membership $record) => $record->user_id === Auth::id() || self::protectsOwner($record)),

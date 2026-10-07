@@ -3,7 +3,8 @@
 namespace Tests\Feature;
 
 use App\Enums\StaffRole;
-use App\Filament\App\Resources\Orders\Pages\ViewOrder;
+use App\Filament\App\Resources\Orders\Pages\ListOrders;
+use App\Filament\App\Resources\Shifts\Pages\ListShifts;
 use App\Models\Company;
 use App\Models\MenuItem;
 use App\Models\User;
@@ -42,13 +43,14 @@ class BackOfficeAccessTest extends TestCase
         }
     }
 
-    public function test_branch_edit_page_with_menu_availability_loads(): void
+    public function test_branch_areas_and_menu_page_loads(): void
     {
         $branch = $this->company->branches()->first();
 
         $this->actingAs($this->owner)
-            ->get("/app/demo-cafe/branches/{$branch->id}/edit")
-            ->assertOk();
+            ->get("/app/demo-cafe/branches/{$branch->id}")
+            ->assertOk()
+            ->assertSee('Menu in this branch');
     }
 
     public function test_order_page_shows_and_cancels_with_reason(): void
@@ -57,14 +59,19 @@ class BackOfficeAccessTest extends TestCase
         $rice = MenuItem::query()->where('name_en', 'Khmer rice noodles')->firstOrFail();
         $order = app(OrderPlacer::class)->place($table, [['menu_item_id' => $rice->id, 'quantity' => 2]]);
 
-        $this->actingAs($this->owner)->get("/app/demo-cafe/orders/{$order->id}")->assertOk()->assertSee('Khmer rice noodles');
+        $this->actingAs($this->owner)->get('/app/demo-cafe/orders')->assertOk()->assertSee('#'.$order->number);
 
         Filament::setCurrentPanel('app');
         Filament::setTenant($this->company);
 
-        Livewire::test(ViewOrder::class, ['record' => $order->id])
-            ->callAction('cancel', ['reason' => 'Kitchen ran out'])
-            ->assertHasNoActionErrors();
+        // The order opens in a modal.
+        Livewire::test(ListOrders::class)
+            ->mountTableAction('view', $order)
+            ->assertMountedActionModalSee('Khmer rice noodles');
+
+        Livewire::test(ListOrders::class)
+            ->callTableAction('cancel', $order, ['reason' => 'Kitchen ran out'])
+            ->assertHasNoTableActionErrors();
 
         $this->assertSame('cancelled', $order->fresh()->status->value);
         $this->assertSame('Kitchen ran out', $order->fresh()->cancel_reason);
@@ -85,7 +92,15 @@ class BackOfficeAccessTest extends TestCase
         $rivalShift = $shifts->open($rival->branches()->firstOrFail(), $stranger, 0, 0);
 
         $this->actingAs($this->owner)->get('/app/demo-cafe/shifts')->assertOk()->assertSee('−$1.00', false);
-        $this->actingAs($this->owner)->get("/app/demo-cafe/shifts/{$shift->id}")->assertOk()->assertSee('Ice delivery')->assertSee('$15.00');
+        $this->actingAs($this->owner);
+        Filament::setCurrentPanel('app');
+        Filament::setTenant($this->company);
+        Livewire::test(ListShifts::class)
+            ->assertCanSeeTableRecords([$shift])
+            ->assertCanNotSeeTableRecords([$rivalShift])
+            ->mountTableAction('view', $shift)
+            ->assertMountedActionModalSee('Ice delivery')
+            ->assertMountedActionModalSee('$15.00');
         // Shown in Phnom Penh time, not UTC.
         $this->actingAs($this->owner)->get('/app/demo-cafe/shifts')->assertSee($shift->opened_at->timezone('Asia/Phnom_Penh')->format('d M H:i'));
 

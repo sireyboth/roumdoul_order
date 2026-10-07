@@ -20,7 +20,7 @@ class Branch extends Model
     protected $fillable = [
         'company_id', 'name', 'code', 'address', 'phone', 'latitude', 'longitude',
         'day_ends_at', 'opening_hours', 'is_active', 'sort_order', 'coreos_branch_id',
-        'receipt_header', 'receipt_footer', 'auto_print_kitchen',
+        'receipt_header', 'receipt_footer', 'auto_print_kitchen', 'require_location', 'order_radius_m',
     ];
 
     protected function casts(): array
@@ -31,6 +31,8 @@ class Branch extends Model
             'opening_hours' => 'array',
             'is_active' => 'boolean',
             'auto_print_kitchen' => 'boolean',
+            'require_location' => 'boolean',
+            'order_radius_m' => 'integer',
         ];
     }
 

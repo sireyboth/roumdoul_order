@@ -48,7 +48,14 @@ export type TableMenu = {
     service_charge_bp: number;
     prices_include_vat: boolean;
   };
-  branch: { id: number; name: string; address: string | null; phone: string | null };
+  branch: {
+    id: number;
+    name: string;
+    address: string | null;
+    phone: string | null;
+    /** The branch only takes QR orders from inside the shop: send the phone's location. */
+    location_required?: boolean;
+  };
   table: { name: string; area: string | null };
   menu_version: string;
   categories: Category[];

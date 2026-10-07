@@ -5,6 +5,7 @@ namespace App\Filament\App\Resources\OptionGroups\Pages;
 use App\Filament\App\Resources\OptionGroups\OptionGroupResource;
 use Filament\Actions\CreateAction;
 use Filament\Resources\Pages\ListRecords;
+use Filament\Support\Enums\Width;
 
 class ListOptionGroups extends ListRecords
 {
@@ -13,7 +14,7 @@ class ListOptionGroups extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
-            CreateAction::make(),
+            CreateAction::make()->modalWidth(Width::FiveExtraLarge),
         ];
     }
 }

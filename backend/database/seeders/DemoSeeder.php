@@ -44,6 +44,9 @@ class DemoSeeder extends Seeder
         $company->memberships()->where('user_id', $owner->id)->update(['pin_hash' => bcrypt('1234')]);
 
         $branch = $company->branches()->first();
+        // A point in BKK1 for the "orders only from inside the shop" check. Left off so the
+        // demo works from any PC; switch it on in Branches → Edit → Location to try it.
+        $branch->update(['latitude' => 11.5564, 'longitude' => 104.9282, 'require_location' => false]);
         $indoor = $branch->tableAreas()->create(['company_id' => $company->id, 'name' => 'Indoor', 'sort_order' => 1]);
         $terrace = $branch->tableAreas()->create(['company_id' => $company->id, 'name' => 'Terrace', 'sort_order' => 2]);
 

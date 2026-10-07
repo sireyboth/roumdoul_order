@@ -18,7 +18,9 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { CartLine, Category, Lang, MenuItem, TableMenu, TableSessionState } from "@/lib/types";
-import { getSession, newKey, placeOrder, requestService } from "@/lib/table-api";
+import { ApiError, getSession, newKey, placeOrder, requestService } from "@/lib/table-api";
+import { LocationError, forgetPhoneLocation, getPhoneLocation, type PhoneLocation } from "@/lib/location";
+import LocationSheet, { type LocStage } from "./location-sheet";
 import { formatMoney, percentOf, toRiel } from "@/lib/money";
 import { pick, t } from "@/lib/i18n";
 import ItemSheet, { canQuickAdd, defaultsFor, lineFor } from "./item-sheet";
@@ -73,6 +75,7 @@ export default function MenuApp({ menu, token }: { menu: TableMenu; token: strin
   const [toast, setToast] = useState<string | null>(null);
   const [thanks, setThanks] = useState(false);
   const [upsell, setUpsell] = useState<{ item: MenuItem; list: MenuItem[] } | null>(null);
+  const [locSheet, setLocSheet] = useState<{ stage: LocStage; retry: () => void } | null>(null);
   // One key per cart submission: a retry after a dropped connection can never create a second order.
   const pendingKey = useRef<string | null>(null);
   const sectionRefs = useRef<Record<number, HTMLElement | null>>({});
@@ -169,46 +172,92 @@ export default function MenuApp({ menu, token }: { menu: TableMenu; token: strin
     if (activeCategory) chipRefs.current[activeCategory]?.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
   }, [activeCategory]);
 
-  async function sendOrder(note: string) {
-    setSending(true);
-    setSendError(null);
-    pendingKey.current ??= newKey();
-
-    try {
-      await placeOrder(token, {
-        idempotency_key: pendingKey.current,
-        note: note.trim() || undefined,
-        items: cart.map((line) => ({
-          menu_item_id: line.itemId,
-          quantity: line.quantity,
-          option_ids: line.optionIds,
-          note: line.note || undefined,
-        })),
-      });
-      pendingKey.current = null;
-      setCart([]);
-      setCartOpen(false);
-      await refreshSession();
-      setJustSent(true);
-      setOrdersOpen(true);
-    } catch (e) {
-      setSendError(e instanceof Error && e.message !== "Request failed" ? e.message : t("tryAgain", lang));
-    } finally {
-      setSending(false);
+  /**
+   * Branches that only take QR orders from inside the shop: get the phone's location first,
+   * then run the action with it. Problems (blocked, no GPS, too far) open the location sheet.
+   */
+  function withLocation(action: (location: PhoneLocation | undefined) => Promise<void>) {
+    if (!menu.branch.location_required) {
+      void action(undefined);
+      return;
     }
+
+    const attempt = async () => {
+      setLocSheet({ stage: "checking", retry: attempt });
+      let location: PhoneLocation;
+      try {
+        location = await getPhoneLocation();
+      } catch (e) {
+        setLocSheet({ stage: e instanceof LocationError ? e.problem : "unavailable", retry: attempt });
+        return;
+      }
+      writeStorage("tok-loc-ok", true);
+      setLocSheet(null);
+      try {
+        await action(location);
+      } catch (e) {
+        if (e instanceof ApiError && e.code === "location_too_far") {
+          // Maybe a bad first GPS fix: the next try asks the phone again.
+          forgetPhoneLocation();
+          setLocSheet({ stage: "too_far", retry: attempt });
+        } else if (e instanceof ApiError && e.code === "location_required") {
+          setLocSheet({ stage: "ask", retry: attempt });
+        }
+      }
+    };
+
+    // Explain once before the browser's own permission question; after that, just check.
+    if (readStorage<boolean>("tok-loc-ok", false)) void attempt();
+    else setLocSheet({ stage: "ask", retry: attempt });
   }
 
-  async function call(type: "waiter" | "bill") {
-    setCalling(type);
-    try {
-      await requestService(token, type);
-      setToast(type === "waiter" ? t("waiterComing", lang) : t("billComing", lang));
-      await refreshSession();
-    } catch {
-      setToast(t("tryAgain", lang));
-    } finally {
-      setCalling(null);
-    }
+  function sendOrder(note: string) {
+    withLocation(async (location) => {
+      setSending(true);
+      setSendError(null);
+      pendingKey.current ??= newKey();
+
+      try {
+        await placeOrder(token, {
+          idempotency_key: pendingKey.current,
+          note: note.trim() || undefined,
+          items: cart.map((line) => ({
+            menu_item_id: line.itemId,
+            quantity: line.quantity,
+            option_ids: line.optionIds,
+            note: line.note || undefined,
+          })),
+          location,
+        });
+        pendingKey.current = null;
+        setCart([]);
+        setCartOpen(false);
+        await refreshSession();
+        setJustSent(true);
+        setOrdersOpen(true);
+      } catch (e) {
+        if (e instanceof ApiError && e.code?.startsWith("location")) throw e;
+        setSendError(e instanceof Error && e.message !== "Request failed" ? e.message : t("tryAgain", lang));
+      } finally {
+        setSending(false);
+      }
+    });
+  }
+
+  function call(type: "waiter" | "bill") {
+    withLocation(async (location) => {
+      setCalling(type);
+      try {
+        await requestService(token, type, location);
+        setToast(type === "waiter" ? t("waiterComing", lang) : t("billComing", lang));
+        await refreshSession();
+      } catch (e) {
+        if (e instanceof ApiError && e.code?.startsWith("location")) throw e;
+        setToast(t("tryAgain", lang));
+      } finally {
+        setCalling(null);
+      }
+    });
   }
 
   const orderCount = session?.orders.length ?? 0;
@@ -710,6 +759,8 @@ export default function MenuApp({ menu, token }: { menu: TableMenu; token: strin
           </button>
         </Sheet>
       )}
+
+      {locSheet && <LocationSheet stage={locSheet.stage} lang={lang} onRetry={locSheet.retry} onClose={() => setLocSheet(null)} />}
 
       {toast && (
         <div

@@ -3,14 +3,14 @@
 namespace App\Filament\App\Resources\MenuItems;
 
 use App\Enums\Station;
-use App\Filament\App\Resources\MenuItems\Pages\CreateMenuItem;
-use App\Filament\App\Resources\MenuItems\Pages\EditMenuItem;
 use App\Filament\App\Resources\MenuItems\Pages\ListMenuItems;
 use App\Models\MenuItem;
 use App\Support\Money;
 use App\Support\Tenant;
 use App\Support\TenantScope;
 use BackedEnum;
+use Filament\Actions\ActionGroup;
+use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Select;
@@ -21,6 +21,7 @@ use Filament\Resources\Resource;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
+use Filament\Support\Enums\Width;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\ImageColumn;
 use Filament\Tables\Columns\TextColumn;
@@ -50,7 +51,7 @@ class MenuItemResource extends Resource
         $currency = Tenant::currency();
 
         return $schema->components([
-            Grid::make(3)->schema([
+            Grid::make(3)->columnSpanFull()->schema([
                 Section::make('Item')
                     ->columnSpan(2)
                     ->columns(2)
@@ -159,11 +160,11 @@ class MenuItemResource extends Resource
                     ->description(fn (MenuItem $record) => $record->name_en)
                     ->searchable(['name_km', 'name_en', 'sku'])
                     ->weight('bold'),
-                TextColumn::make('category.name_en')->label('Category'),
+                TextColumn::make('category.name_en')->label('Category')->visibleFrom('md'),
                 TextColumn::make('price')
                     ->formatStateUsing(fn ($state) => Money::format($state, $currency))
                     ->sortable(),
-                TextColumn::make('station')->badge(),
+                TextColumn::make('station')->badge()->visibleFrom('lg'),
                 ToggleColumn::make('is_active')->label('Shown'),
             ])
             ->filters([
@@ -171,16 +172,25 @@ class MenuItemResource extends Resource
                     ->relationship('category', 'name_en', fn (Builder $query) => TenantScope::apply($query)),
             ])
             ->recordActions([
-                EditAction::make(),
+                ActionGroup::make([
+                    self::editAction(),
+                    DeleteAction::make(),
+                ]),
             ]);
+    }
+
+    /** Edit opens in a large modal. Option groups and suggestions are saved through pivots, so bump the menu cache key afterwards. */
+    public static function editAction(): EditAction
+    {
+        return EditAction::make()
+            ->modalWidth(Width::SixExtraLarge)
+            ->after(fn (MenuItem $record) => $record->bumpMenuVersion());
     }
 
     public static function getPages(): array
     {
         return [
             'index' => ListMenuItems::route('/'),
-            'create' => CreateMenuItem::route('/create'),
-            'edit' => EditMenuItem::route('/{record}/edit'),
         ];
     }
 }

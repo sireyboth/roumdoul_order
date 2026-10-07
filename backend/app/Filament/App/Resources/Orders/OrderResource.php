@@ -4,7 +4,6 @@ namespace App\Filament\App\Resources\Orders;
 
 use App\Enums\OrderStatus;
 use App\Filament\App\Resources\Orders\Pages\ListOrders;
-use App\Filament\App\Resources\Orders\Pages\ViewOrder;
 use App\Models\Order;
 use App\Support\BranchScope;
 use App\Support\Money;
@@ -19,6 +18,7 @@ use Filament\Resources\Resource;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
+use Filament\Support\Enums\Width;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\Filter;
@@ -74,11 +74,11 @@ class OrderResource extends Resource
             ->poll('15s')
             ->columns([
                 TextColumn::make('number')->label('#')->weight('bold')->prefix('#'),
-                TextColumn::make('created_at')->label('Time')->dateTime('d M H:i')->sortable(),
-                TextColumn::make('branch.name')->label('Branch'),
+                TextColumn::make('created_at')->label('Time')->dateTime('d M H:i')->sortable()->visibleFrom('sm'),
+                TextColumn::make('branch.name')->label('Branch')->visibleFrom('lg'),
                 TextColumn::make('table.name')->label('Table')->placeholder('—'),
                 TextColumn::make('status')->badge(),
-                TextColumn::make('source')->badge()->color('gray'),
+                TextColumn::make('source')->badge()->color('gray')->visibleFrom('lg'),
                 TextColumn::make('subtotal')
                     ->label('Amount')
                     ->formatStateUsing(fn (Order $record) => Money::format($record->subtotal, $record->currency))
@@ -92,7 +92,10 @@ class OrderResource extends Resource
                     ->query(fn (Builder $query, array $data) => $query->when($data['date'] ?? null, fn ($q, $date) => $q->whereDate('business_date', $date))),
             ])
             ->recordActions([
-                ViewAction::make(),
+                ViewAction::make()
+                    ->modalHeading(fn (Order $record) => 'Order #'.$record->number)
+                    ->modalWidth(Width::FiveExtraLarge)
+                    ->extraModalFooterActions([self::cancelAction()->cancelParentActions()]),
                 self::cancelAction(),
             ]);
     }
@@ -100,7 +103,7 @@ class OrderResource extends Resource
     public static function infolist(Schema $schema): Schema
     {
         return $schema->components([
-            Grid::make(3)->schema([
+            Grid::make(3)->columnSpanFull()->schema([
                 Section::make('Order')
                     ->columnSpan(1)
                     ->schema([
@@ -114,6 +117,11 @@ class OrderResource extends Resource
                         TextEntry::make('served_at')->label('Served')->dateTime('H:i')->placeholder('—'),
                         TextEntry::make('cancel_reason')->label('Cancel reason')->placeholder('—')->visible(fn (Order $record) => $record->cancel_reason !== null),
                         TextEntry::make('note')->placeholder('—'),
+                        TextEntry::make('customer_distance_m')
+                            ->label('Phone was')
+                            ->state(fn (Order $record) => $record->customer_distance_m === null ? null : $record->customer_distance_m.' m from the shop')
+                            ->placeholder('Not checked')
+                            ->visible(fn (Order $record) => $record->source === 'qr'),
                     ]),
                 Section::make('Items')
                     ->columnSpan(2)
@@ -143,7 +151,6 @@ class OrderResource extends Resource
     {
         return [
             'index' => ListOrders::route('/'),
-            'view' => ViewOrder::route('/{record}'),
         ];
     }
 }

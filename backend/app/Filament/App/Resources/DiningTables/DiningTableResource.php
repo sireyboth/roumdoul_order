@@ -107,9 +107,9 @@ class DiningTableResource extends Resource
             ->reorderable('sort_order')
             ->columns([
                 TextColumn::make('name')->searchable()->weight('bold'),
-                TextColumn::make('branch.name')->label('Branch'),
+                TextColumn::make('branch.name')->label('Branch')->visibleFrom('md'),
                 TextColumn::make('area.name')->label('Area')->placeholder('—'),
-                TextColumn::make('seats')->placeholder('—'),
+                TextColumn::make('seats')->placeholder('—')->visibleFrom('sm'),
                 ToggleColumn::make('is_active')->label('Active'),
             ])
             ->filters([

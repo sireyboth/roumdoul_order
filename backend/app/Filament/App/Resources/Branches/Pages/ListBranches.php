@@ -5,6 +5,7 @@ namespace App\Filament\App\Resources\Branches\Pages;
 use App\Filament\App\Resources\Branches\BranchResource;
 use Filament\Actions\CreateAction;
 use Filament\Resources\Pages\ListRecords;
+use Filament\Support\Enums\Width;
 
 class ListBranches extends ListRecords
 {
@@ -13,7 +14,7 @@ class ListBranches extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
-            CreateAction::make(),
+            CreateAction::make()->modalWidth(Width::FourExtraLarge),
         ];
     }
 }

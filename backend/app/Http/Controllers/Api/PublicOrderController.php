@@ -10,6 +10,7 @@ use App\Models\Order;
 use App\Models\ServiceRequest;
 use App\Models\TableSession;
 use App\Services\MenuBuilder;
+use App\Services\Ordering\LocationCheck;
 use App\Services\Ordering\OrderPlacer;
 use App\Services\Ordering\OrderPresenter;
 use App\Services\Ordering\ServiceRequests;
@@ -43,13 +44,20 @@ class PublicOrderController extends Controller
             'items.*.option_ids' => ['array', 'max:20'],
             'items.*.option_ids.*' => ['integer'],
             'items.*.note' => ['nullable', 'string', 'max:120'],
+            ...LocationCheck::rules(),
         ]);
 
         $existed = OrderPlacer::existing($table, $data['idempotency_key']) !== null;
 
+        // A retry of an order already accepted is answered as before; new orders must come from the shop.
+        $distance = $existed ? null : LocationCheck::enforce($table->branch, $data['location'] ?? null);
+
         $order = $placer->place($table, $data['items'], $data['note'] ?? null, $data['idempotency_key']);
 
         if (! $existed) {
+            if ($distance !== null) {
+                $order->forceFill(['customer_distance_m' => $distance])->saveQuietly();
+            }
             dispatch(fn () => app(TelegramNotifier::class)->newOrder($order))->afterResponse();
         }
 
@@ -120,9 +128,13 @@ class PublicOrderController extends Controller
 
     public function requestService(Request $request, string $token, ServiceRequests $service): JsonResponse
     {
-        $table = DiningTable::query()->findOrFail($this->table($token)->id);
+        $resolved = $this->table($token);
+        $table = DiningTable::query()->findOrFail($resolved->id);
 
-        $data = $request->validate(['type' => ['required', Rule::in(ServiceRequest::TYPES)]]);
+        $data = $request->validate(['type' => ['required', Rule::in(ServiceRequest::TYPES)], ...LocationCheck::rules()]);
+
+        // Calling a waiter or asking for the bill from home is spam too.
+        LocationCheck::enforce($resolved->branch, $data['location'] ?? null);
 
         $serviceRequest = $service->open($table, $data['type']);
 

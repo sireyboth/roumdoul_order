@@ -177,6 +177,8 @@ A physical shop. `day_ends_at` sets the business-day cutoff; `menu_version` is b
 | `phone` | varchar | yes |  |  |
 | `latitude` | numeric | yes |  |  |
 | `longitude` | numeric | yes |  |  |
+| `require_location` | boolean |  | false | QR orders and calls only from inside the shop (needs latitude/longitude) |
+| `order_radius_m` | smallint |  | 150 | allowed distance in metres; the phone accuracy adds up to 100 m |
 | `day_ends_at` | time |  | 04:00:00 |  |
 | `receipt_header` / `receipt_footer` | varchar(500) | yes |  | printed on bills and receipts (B4) |
 | `auto_print_kitchen` | tinyint |  | 0 | kitchen/bar screens print new orders (B4) |
@@ -413,6 +415,7 @@ One 'Send order' tap. `number` restarts daily per branch; `business_date` follow
 | `business_date` | date |  |  |  |
 | `status` | varchar |  | placed |  |
 | `source` | varchar |  | qr |  |
+| `customer_distance_m` | int | yes |  | metres between the phone and the branch when ordering (QR only; null = not checked) |
 | `placed_by_user_id` | integer | yes |  | users.id (set null) |
 | `idempotency_key` | varchar | yes |  |  |
 | `note` | varchar | yes |  |  |

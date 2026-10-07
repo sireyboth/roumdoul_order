@@ -19,6 +19,9 @@ class SalesOverview extends StatsOverviewWidget
 
     protected ?string $pollingInterval = '30s';
 
+    /** Two cards per row on phones instead of one long column; four on wide screens. */
+    protected int|array|null $columns = ['default' => 2, '@xl' => 4, '!@lg' => 4];
+
     protected function getStats(): array
     {
         $company = Tenant::current();

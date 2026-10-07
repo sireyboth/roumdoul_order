@@ -15,6 +15,9 @@ use Filament\Pages\Dashboard;
 use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
+use Filament\Support\Enums\Width;
+use Filament\View\PanelsRenderHook;
+use Illuminate\Support\HtmlString;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
@@ -51,6 +54,14 @@ class AppPanelProvider extends PanelProvider
                 url: 'https://fonts.googleapis.com/css2?family=Kantumruy+Pro:wght@300..700&display=swap',
                 provider: GoogleFontProvider::class,
             )
+            ->maxContentWidth(Width::Full)
+            ->sidebarCollapsibleOnDesktop()
+            // Branch "Areas & menu" is a view page; its areas and menu must stay editable there.
+            ->readOnlyRelationManagersOnResourceViewPagesByDefault(false)
+            // "Use my current location" on the branch form (public/js/use-my-location.js).
+            ->renderHook(PanelsRenderHook::BODY_END, fn () => new HtmlString(
+                '<script src="'.asset('js/use-my-location.js').'?v='.@filemtime(public_path('js/use-my-location.js')).'"></script>',
+            ))
             ->navigationGroups([
                 'Menu',
                 'Restaurant',

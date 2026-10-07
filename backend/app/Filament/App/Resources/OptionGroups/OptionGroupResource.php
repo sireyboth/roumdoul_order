@@ -16,6 +16,7 @@ use Filament\Resources\Resource;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
+use Filament\Support\Enums\Width;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
@@ -38,7 +39,7 @@ class OptionGroupResource extends Resource
         $currency = Tenant::currency();
 
         return $schema->components([
-            Grid::make(2)->schema([
+            Grid::make(2)->columnSpanFull()->schema([
                 TextInput::make('name_km')->label('Name (Khmer)')->placeholder('កម្រិតស្ករ')->required()->maxLength(80),
                 TextInput::make('name_en')->label('Name (English)')->placeholder('Sugar level')->required()->maxLength(80),
                 TextInput::make('min_select')
@@ -53,15 +54,21 @@ class OptionGroupResource extends Resource
             Repeater::make('options')
                 ->relationship()
                 ->orderColumn('sort_order')
+                ->label('Choices')
                 ->addActionLabel('Add choice')
                 ->minItems(1)
-                ->columns(4)
+                ->columnSpanFull()
+                // Phones: one field per row. Wide screens: names wide, price and switches narrow.
+                ->columns(['default' => 1, 'sm' => 2, 'lg' => 12])
                 ->itemLabel(fn (array $state) => $state['name_en'] ?? null)
                 ->mutateRelationshipDataBeforeCreateUsing(fn (array $data) => [...$data, 'company_id' => Tenant::id()])
                 ->schema([
-                    TextInput::make('name_km')->label('Khmer')->required()->maxLength(80),
-                    TextInput::make('name_en')->label('English')->required()->maxLength(80),
+                    TextInput::make('name_km')->label('Khmer')->placeholder('ស្ករ ៥០%')->required()->maxLength(80)
+                        ->columnSpan(['lg' => 3]),
+                    TextInput::make('name_en')->label('English')->placeholder('50% sugar')->required()->maxLength(80)
+                        ->columnSpan(['lg' => 3]),
                     TextInput::make('price_delta')
+                        ->columnSpan(['lg' => 2])
                         ->label('Extra price')
                         ->prefix($currency === 'KHR' ? '៛' : '$')
                         ->numeric()
@@ -69,10 +76,11 @@ class OptionGroupResource extends Resource
                         ->step($currency === 'KHR' ? 100 : 0.01)
                         ->formatStateUsing(fn ($state) => Money::fromMinor($state, $currency))
                         ->dehydrateStateUsing(fn ($state) => Money::toMinor($state, $currency) ?? 0),
-                    Grid::make(1)->schema([
-                        Toggle::make('is_default')->label('Pre-selected'),
-                        Toggle::make('is_active')->label('Available')->default(true),
-                    ])->columnSpan(1),
+                    // The two switches side by side, lined up with the inputs.
+                    Grid::make(2)->schema([
+                        Toggle::make('is_default')->label('Pre-selected')->inline(false),
+                        Toggle::make('is_active')->label('Available')->default(true)->inline(false),
+                    ])->columnSpan(['sm' => 2, 'lg' => 4]),
                 ]),
         ]);
     }
@@ -90,12 +98,15 @@ class OptionGroupResource extends Resource
                         $record->min_select === 1 && $record->max_select === 1 => 'Pick 1 (required)',
                         $record->min_select === 0 && $record->max_select === 1 => 'Pick 0 or 1',
                         default => "Pick {$record->min_select} to {$record->max_select}",
-                    }),
+                    })
+                    ->visibleFrom('md'),
                 TextColumn::make('options_count')->label('Choices')->counts('options')->badge(),
-                TextColumn::make('menu_items_count')->label('Used by items')->counts('menuItems'),
+                TextColumn::make('menu_items_count')->label('Used by items')->counts('menuItems')->visibleFrom('lg'),
             ])
             ->recordActions([
-                EditAction::make()->after(fn (OptionGroup $record) => $record->bumpMenuVersion()),
+                EditAction::make()
+                    ->modalWidth(Width::FiveExtraLarge)
+                    ->after(fn (OptionGroup $record) => $record->bumpMenuVersion()),
                 DeleteAction::make(),
             ]);
     }

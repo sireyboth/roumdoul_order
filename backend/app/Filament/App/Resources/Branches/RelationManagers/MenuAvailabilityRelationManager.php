@@ -41,9 +41,10 @@ class MenuAvailabilityRelationManager extends RelationManager
                     ->label('Item')
                     ->description(fn (BranchMenuItem $record) => $record->menuItem?->name_km)
                     ->searchable(),
-                TextColumn::make('menuItem.category.name_en')->label('Category'),
+                TextColumn::make('menuItem.category.name_en')->label('Category')->visibleFrom('md'),
                 TextColumn::make('menuItem.price')
                     ->label('Company price')
+                    ->visibleFrom('md')
                     ->formatStateUsing(fn ($state) => Money::format($state, $currency)),
                 TextInputColumn::make('price')
                     ->label('Branch price')

@@ -3,7 +3,6 @@
 namespace App\Filament\App\Resources\Shifts;
 
 use App\Filament\App\Resources\Shifts\Pages\ListShifts;
-use App\Filament\App\Resources\Shifts\Pages\ViewShift;
 use App\Models\Shift;
 use App\Services\Billing\ShiftService;
 use App\Support\BranchScope;
@@ -16,6 +15,7 @@ use Filament\Resources\Resource;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
+use Filament\Support\Enums\Width;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
@@ -67,16 +67,18 @@ class ShiftResource extends Resource
             ->defaultSort('id', 'desc')
             ->columns([
                 TextColumn::make('opened_at')->label('Opened')->dateTime('d M H:i')->sortable(),
-                TextColumn::make('closed_at')->label('Closed')->dateTime('d M H:i')->placeholder('Still open'),
-                TextColumn::make('branch.name')->label('Branch'),
-                TextColumn::make('openedBy.name')->label('Cashier')->placeholder('—'),
+                TextColumn::make('closed_at')->label('Closed')->dateTime('d M H:i')->placeholder('Still open')->visibleFrom('md'),
+                TextColumn::make('branch.name')->label('Branch')->visibleFrom('lg'),
+                TextColumn::make('openedBy.name')->label('Cashier')->placeholder('—')->visibleFrom('md'),
                 TextColumn::make('status')->badge()->color(fn (string $state) => $state === 'open' ? 'warning' : 'gray'),
                 TextColumn::make('expected')
                     ->label('Expected cash')
-                    ->state(fn (Shift $record) => self::both($record->expected_cash_usd, $record->expected_cash_khr)),
+                    ->state(fn (Shift $record) => self::both($record->expected_cash_usd, $record->expected_cash_khr))
+                    ->visibleFrom('lg'),
                 TextColumn::make('counted')
                     ->label('Counted')
-                    ->state(fn (Shift $record) => self::both($record->counted_cash_usd, $record->counted_cash_khr)),
+                    ->state(fn (Shift $record) => self::both($record->counted_cash_usd, $record->counted_cash_khr))
+                    ->visibleFrom('lg'),
                 TextColumn::make('difference')
                     ->label('Difference')
                     ->state(fn (Shift $record) => self::both($record->difference_usd, $record->difference_khr))
@@ -88,7 +90,9 @@ class ShiftResource extends Resource
                 SelectFilter::make('branch')->relationship('branch', 'name', fn (Builder $query) => BranchScope::branches($query)),
             ])
             ->recordActions([
-                ViewAction::make(),
+                ViewAction::make()
+                    ->modalHeading(fn (Shift $record) => 'Shift '.$record->opened_at->format('d M H:i'))
+                    ->modalWidth(Width::FiveExtraLarge),
             ]);
     }
 
@@ -103,7 +107,7 @@ class ShiftResource extends Resource
             });
 
         return $schema->components([
-            Grid::make(2)->schema([
+            Grid::make(2)->columnSpanFull()->schema([
                 Section::make('Shift')
                     ->columns(2)
                     ->schema([
@@ -167,7 +171,6 @@ class ShiftResource extends Resource
     {
         return [
             'index' => ListShifts::route('/'),
-            'view' => ViewShift::route('/{record}'),
         ];
     }
 }

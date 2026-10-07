@@ -61,11 +61,12 @@ Demo logins (password `password`): `owner@roumdoul.test` (/app, manager PIN `123
    - Public API: company/branch come **only** from the table token (`MenuBuilder::resolveTable`).
    - Staff API: every endpoint calls `StaffAccess::authorize($user, $branch, $roles)`.
    - **Branches:** owners see every branch; everyone else only the branches ticked on the Staff page (`branch_user`; a one-branch restaurant needs none). Back-office resources with `branch_id` override `getEloquentQuery()` with `BranchScope::apply()`, branch pickers use `BranchScope::branches()`, reports take `BranchScope::ids()`. Any new branch screen must do the same.
-4. **Idempotency:** order (and later payment) creation takes an `idempotency_key`; a retry returns the existing record.
-5. **Order status** changes only via `Order::moveTo()`; allowed moves live in `App\Enums\OrderStatus::canMoveTo()`. Cancel requires a reason and writes the audit log.
-6. **Menu cache:** never cache a menu without the version in the key; models using `BumpsMenuVersion` bump it on change. If you change option groups of an item via a pivot, call `bumpMenuVersion()` yourself.
-7. **Business date:** use `Branch::businessDate()`, not `now()->toDateString()`.
-8. **Never hard-delete** orders or money rows; cancel / void / refund with a reason instead.
+4. **Orders only from inside the shop:** when a branch has `require_location` and a map point, public orders and service requests must send `location` {lat, lng, accuracy}; `Services/Ordering/LocationCheck::enforce()` refuses with 422 + `code` (`location_required` / `location_too_far`). Staff (waiter) orders are never checked. Browsers only share location on https.
+5. **Idempotency:** order (and later payment) creation takes an `idempotency_key`; a retry returns the existing record.
+6. **Order status** changes only via `Order::moveTo()`; allowed moves live in `App\Enums\OrderStatus::canMoveTo()`. Cancel requires a reason and writes the audit log.
+7. **Menu cache:** never cache a menu without the version in the key; models using `BumpsMenuVersion` bump it on change. If you change option groups of an item via a pivot, call `bumpMenuVersion()` yourself.
+8. **Business date:** use `Branch::businessDate()`, not `now()->toDateString()`.
+9. **Never hard-delete** orders or money rows; cancel / void / refund with a reason instead.
 
 ## Code layout (backend)
 
@@ -77,7 +78,8 @@ Demo logins (password `password`): `owner@roumdoul.test` (/app, manager PIN `123
 - `app/Support` – `Money` (incl. riel rounding/conversion), `QrCode`, `Tenant`, `TenantScope`, `StaffAccess`, `ManagerPin` (owner/manager PIN approval, rate-limited).
 - `app/Enums` – `OrderStatus`, `StaffRole`, `CompanyStatus`, `Station`, `BillStatus`, `PaymentMethod`.
 - `app/Http/Controllers/Api` – `PublicMenuController`, `PublicOrderController`, `StaffAuthController`, `StaffBoardController`, `StaffCashierController` (cashier tables/bills/payments + waiter orders), `StaffShiftController` (cash drawer), `StaffPrintController` (receipt / ticket data), `StaffFloorController` (floor plan: GET any staff, PUT owner/manager).
-- `app/Filament/App/Resources` – Branches (+ Areas, Menu availability relation managers), DiningTables (QR, add many), Categories, MenuItems, OptionGroups, Staff, Orders, Shifts (read-only), DailySales (read-only + CSV export actions). `app/Filament/App/Widgets` – SalesOverview, SalesChart, PaymentMethodsChart, BestSellers, SetupOverview.
+- `app/Filament/App/Resources` – Branches (+ Areas, Menu availability relation managers on the `ViewBranch` "Areas & menu" page), DiningTables (QR, add many), Categories, MenuItems, OptionGroups, Staff, Orders, Shifts (read-only), DailySales (read-only + CSV export actions). `app/Filament/App/Widgets` – SalesOverview, SalesChart, PaymentMethodsChart, BestSellers, SetupOverview.
+- **Back office UI rules:** create / edit / view are **modals**, not pages (only list pages; the one exception is a branch's "Areas & menu" page, which holds two big tables). Put form/infolist `Grid`s in `->columnSpanFull()` or they fill only half the modal. Tables must fit a phone: hide secondary columns with `->visibleFrom('md'|'lg')`. Test modals with `callAction` / `callTableAction` / `mountTableAction` + `assertMountedActionModalSee`. Time-only fields (e.g. `day_ends_at`) use `->timezone(config('app.timezone'))` so the company time zone does not shift them.
 - `routes/api.php` – public (`throttle:public-read|public-write`, limited per token) and staff (`auth:sanctum`).
 
 ## Code layout (frontend)

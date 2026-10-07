@@ -50,7 +50,7 @@ class CategoryResource extends Resource
             ->columns([
                 ImageColumn::make('image_path')->label('')->disk('public')->square()->size(40),
                 TextColumn::make('name_km')->label('Khmer')->searchable()->weight('bold'),
-                TextColumn::make('name_en')->label('English')->searchable(),
+                TextColumn::make('name_en')->label('English')->searchable()->visibleFrom('sm'),
                 TextColumn::make('menu_items_count')->label('Items')->counts('menuItems')->badge(),
                 ToggleColumn::make('is_active')->label('Shown'),
             ])

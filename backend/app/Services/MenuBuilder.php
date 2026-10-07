@@ -8,6 +8,7 @@ use App\Models\Category;
 use App\Models\Company;
 use App\Models\DiningTable;
 use App\Models\MenuItem;
+use App\Services\Ordering\LocationCheck;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
 
@@ -108,6 +109,8 @@ class MenuBuilder
                 'name' => $branch->name,
                 'address' => $branch->address,
                 'phone' => $branch->phone,
+                // The phone asks for its location before sending (checked again on the server).
+                'location_required' => LocationCheck::required($branch),
             ],
             'table' => [
                 'name' => $ids['name'],

@@ -1,4 +1,15 @@
 import type { PlacedOrder, TableSessionState } from "./types";
+import type { PhoneLocation } from "./location";
+
+/** An error from the server, with its machine-readable code when it sent one (e.g. "location_too_far"). */
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    public code: string | null,
+  ) {
+    super(message);
+  }
+}
 
 /** Customer calls, through this site's /api/t proxy. */
 async function call<T>(token: string, action: string, init?: RequestInit): Promise<T> {
@@ -12,7 +23,7 @@ async function call<T>(token: string, action: string, init?: RequestInit): Promi
   if (!res.ok) {
     // Laravel validation errors: show the first message as-is (it names the item).
     const first = body?.errors ? (Object.values(body.errors)[0] as string[] | undefined)?.[0] : undefined;
-    throw new Error(first ?? body?.message ?? "Request failed");
+    throw new ApiError(first ?? body?.message ?? "Request failed", typeof body?.code === "string" ? body.code : null);
   }
 
   return body.data as T;
@@ -20,7 +31,10 @@ async function call<T>(token: string, action: string, init?: RequestInit): Promi
 
 export type OrderLineInput = { menu_item_id: number; quantity: number; option_ids: number[]; note?: string };
 
-export function placeOrder(token: string, payload: { idempotency_key: string; note?: string; items: OrderLineInput[] }) {
+export function placeOrder(
+  token: string,
+  payload: { idempotency_key: string; note?: string; items: OrderLineInput[]; location?: PhoneLocation },
+) {
   return call<PlacedOrder>(token, "orders", { method: "POST", body: JSON.stringify(payload) });
 }
 
@@ -28,8 +42,8 @@ export function getSession(token: string) {
   return call<TableSessionState>(token, "session");
 }
 
-export function requestService(token: string, type: "waiter" | "bill") {
-  return call<{ type: string; status: string }>(token, "requests", { method: "POST", body: JSON.stringify({ type }) });
+export function requestService(token: string, type: "waiter" | "bill", location?: PhoneLocation) {
+  return call<{ type: string; status: string }>(token, "requests", { method: "POST", body: JSON.stringify({ type, location }) });
 }
 
 export function newKey(): string {
