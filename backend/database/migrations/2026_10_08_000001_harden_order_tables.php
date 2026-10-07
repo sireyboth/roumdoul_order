@@ -27,18 +27,25 @@ return new class extends Migration
             });
         }
 
-        Schema::table('orders', function (Blueprint $table) {
-            // MySQL needs its own index for the dining_table_id foreign key before the old unique goes.
-            $table->index('dining_table_id');
-            $table->dropUnique(['dining_table_id', 'idempotency_key']);
-            $table->unique(['branch_id', 'idempotency_key']);
-        });
+        // Guards below let the migration re-run after a partial run (MySQL DDL is not transactional).
+        if (! Schema::hasIndex('orders', ['branch_id', 'idempotency_key'], 'unique')) {
+            Schema::table('orders', function (Blueprint $table) {
+                // MySQL needs its own index for the dining_table_id foreign key before the old unique goes.
+                if (! Schema::hasIndex('orders', ['dining_table_id'])) {
+                    $table->index('dining_table_id');
+                }
+                $table->dropUnique(['dining_table_id', 'idempotency_key']);
+                $table->unique(['branch_id', 'idempotency_key']);
+            });
+        }
 
-        if ($this->isMySql()) {
+        if ($this->isMySql() && ! Schema::hasColumn('table_sessions', 'open_table_id')) {
             Schema::table('table_sessions', function (Blueprint $table) {
+                // Virtual, not stored: MySQL 8 forbids a stored generated column whose base
+                // column (dining_table_id) has an ON DELETE CASCADE foreign key.
                 $table->unsignedBigInteger('open_table_id')
                     ->nullable()
-                    ->storedAs("IF(status <> 'closed', dining_table_id, NULL)");
+                    ->virtualAs("IF(status <> 'closed', dining_table_id, NULL)");
                 $table->unique('open_table_id');
             });
         }
