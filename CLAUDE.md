@@ -8,6 +8,7 @@ Read these before larger changes:
 - `docs/architecture.md`: how the parts connect and how data flows (order, menu, money)
 - `docs/database.md`: every table, column, index, plus the planned part B / Step 2 tables
 - `docs/roadmap.md`: what is done, what is next, the exact scope of the next task
+- `docs/user-guide.md`: how each person uses the system (owner setup, customer, kitchen, waiter, cashier, daily checks, troubleshooting). Update it when a screen or label changes
 - `docs/step2-features.md`: how each Step 2 feature should work (upsell pop-up, combos, feedback, multi-language, kiosk, multi-branch, automatic KHQR, split bill)
 
 ## Stack
@@ -119,3 +120,7 @@ Step 0 and all of Step 1 (part A, and part B: bills & payments, cashier screen, 
 - **Translations:** today `categories` and `menu_items` have `name_km`, `name_en`, `name_zh`, but `option_groups` and `options` only have `name_km`, `name_en` (inconsistent). Recommended fix in B1: switch all four tables to one JSON `name` column per field (`{"km": "...", "en": "...", "zh": "..."}`, e.g. `spatie/laravel-translatable`), with `companies.languages` choosing which languages a restaurant uses and a fallback order en → km. Do not add more `name_xx` columns until the owner decides.
 
 Write user-facing text in plain language; Khmer + English on customer screens.
+
+## Online docs
+
+The online reference page (features, diagrams, all tables, user guide) is https://claude.ai/artifact/XFXdQJczECUWxJoNUX5Rvi. Its "How to use" section matches `docs/user-guide.md`.
