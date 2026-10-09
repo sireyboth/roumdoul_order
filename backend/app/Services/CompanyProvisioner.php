@@ -19,8 +19,6 @@ use Illuminate\Support\Str;
  */
 class CompanyProvisioner
 {
-    public const TRIAL_DAYS = 14;
-
     /** Words used by /app routes; a company slug must never equal one of them. */
     private const RESERVED_SLUGS = ['profile', 'login', 'logout', 'register', 'new', 'password-reset', 'email-verification', 'tenant'];
 
@@ -40,7 +38,7 @@ class CompanyProvisioner
                 'email' => $owner->email,
                 'currency' => $data['currency'] ?? 'USD',
                 'status' => CompanyStatus::Trial,
-                'trial_ends_at' => now()->addDays(self::TRIAL_DAYS),
+                'trial_ends_at' => now()->addDays((int) config('app.trial_days')),
             ]);
 
             $plan = Plan::query()->where('code', $planCode ?? 'starter')->first()

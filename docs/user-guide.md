@@ -36,8 +36,10 @@ Your own panel to run the business: plans and every restaurant on the platform.
 1. **Sign in**: `admin@roumdoul.test` / password on the demo.
 2. **Set your prices**: Plans: monthly / yearly price, how many branches, tables and staff, which features. The demo prices ($19 / $39 / $99) are placeholders.
 3. **Add a restaurant yourself (after a sales visit)**: Restaurants → Add restaurant: name, first branch, currency, plan, owner name, email and password. They can then sign in at /app.
-4. **Or let them sign up**: Owners can register themselves at `/app/register` and get a 14-day trial.
-5. **Manage restaurants**: Change status (trial, active, suspended, cancelled) or the trial end date. Suspended restaurants' QR codes stop working.
+4. **Or let them sign up**: Owners can register themselves at `/app/register` and get a free trial (14 days by default; change it with `TRIAL_DAYS` in `backend/.env`).
+5. **Manage restaurants**: Edit to change status (trial, active, suspended, cancelled) or the trial end date. When the trial ends, or the restaurant is suspended or cancelled, its QR codes and staff screens stop working. Set **Active** once they pay.
+6. **Change plan**: Restaurants → Change plan (e.g. Starter → Pro). The new branch / table / staff limits apply right away; if they are already over a lower limit, nothing is removed, they just can't add more.
+7. **Block a person**: Users → Block (abuse, lost phone, unpaid). They are signed out everywhere and can't sign in until you Unblock them.
 
 ## Owner: first-day setup
 
@@ -152,6 +154,22 @@ Start Chrome on the kitchen / cashier computer with `--kiosk-printing` and set t
 ### Telegram messages don't arrive
 
 Set `TELEGRAM_BOT_TOKEN` in backend/.env, add the bot to your group, put the group chat ID in Restaurant settings, and keep the scheduler window open for day-end summaries.
+
+### Someone can't sign in
+
+A wrong email or password always shows the same short message. With the **right** password, the sign-in page says why they can't come in and who can fix it:
+
+| Message | Who unblocks it |
+|---|---|
+| "This account is blocked" | Roumdoul: /admin → Users → Unblock |
+| "Your access to … is switched off" | The restaurant owner or a manager: Staff page → turn **Active** back on |
+| "You are not given any branch yet" | Owner or manager: Staff → edit → tick their branch |
+| "… is paused" / "free trial has ended" / "… is closed" | Roumdoul: /admin → Restaurants → set status to Active (or a new trial end date) |
+| "This account is for the staff screens" | Nothing to fix: kitchen / waiter / cashier accounts sign in at /staff, not /app |
+| "cannot open the Roumdoul admin" | Nothing to fix: owners sign in at /app |
+| "Too many attempts" | Nobody: wait one minute |
+
+Blocking in /admin → Users signs the person out of every screen at once. A restaurant can only switch people on or off for **its own** restaurant; it can't block or unblock a whole account.
 
 ### A manager forgot their PIN
 

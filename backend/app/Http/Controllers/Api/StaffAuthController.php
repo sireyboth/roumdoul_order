@@ -7,6 +7,7 @@ use App\Models\Branch;
 use App\Models\Membership;
 use App\Models\User;
 use App\Support\Live;
+use App\Support\SignInBlock;
 use App\Support\StaffAccess;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -34,17 +35,18 @@ class StaffAuthController extends Controller
 
         $user = User::query()->where('email', strtolower($data['email']))->first();
 
-        if (! $user || ! $user->is_active || ! Hash::check($data['password'], $user->password)) {
+        if (! $user || ! Hash::check($data['password'], $user->password)) {
             RateLimiter::hit($key, 60);
             throw ValidationException::withMessages(['email' => 'Email or password is wrong.']);
         }
 
         RateLimiter::clear($key);
 
-        $branches = $this->branchesFor($user);
+        $branches = $user->is_active ? $this->branchesFor($user) : [];
 
         if ($branches === []) {
-            throw ValidationException::withMessages(['email' => 'This account is not on the staff of any restaurant.']);
+            // Right password: say why they can't come in and who can fix it.
+            throw ValidationException::withMessages(['email' => SignInBlock::forStaff($user)]);
         }
 
         $token = $user->createToken($data['device_name'] ?? 'staff-screen', ['staff'])->plainTextToken;
