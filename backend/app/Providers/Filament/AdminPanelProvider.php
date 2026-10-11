@@ -28,6 +28,7 @@ class AdminPanelProvider extends PanelProvider
             ->path('admin')
             ->brandName('Roumdoul Order Platform')
             ->login(Login::class)
+            ->spa()
             ->colors([
                 'primary' => Color::Slate,
             ])
