@@ -20,6 +20,8 @@ Diagrams: the "Roumdoul Order System" page, https://claude.ai/artifact/XFXdQJczE
 
 ## Who uses what
 
+Step-by-step instructions for each role are in `docs/user-guide.md`.
+
 | Person | Screen | Auth |
 |---|---|---|
 | Customer | `/t/{qr_token}` | none – the token is the identity |

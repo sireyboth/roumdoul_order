@@ -2,6 +2,7 @@
 
 namespace App\Providers\Filament;
 
+use App\Filament\Auth\Login;
 use App\Filament\App\Pages\Tenancy\EditCompanyProfile;
 use App\Http\Middleware\UseCompanyTimezone;
 use App\Filament\App\Pages\Tenancy\RegisterCompany;
@@ -39,7 +40,7 @@ class AppPanelProvider extends PanelProvider
             ->id('app')
             ->path('app')
             ->brandName('Roumdoul Order')
-            ->login()
+            ->login(Login::class)
             ->registration()
             ->passwordReset()
             ->profile()

@@ -1,8 +1,25 @@
 @import "tailwindcss";
 
 /*
+ * Light / dark: follows the phone unless the guest picks one with the theme button,
+ * which sets <html data-theme="light|dark"> (saved in localStorage, applied before paint
+ * by the script in layout.tsx). `dark:` utilities follow the same rule.
+ */
+@custom-variant dark {
+  &:where([data-theme="dark"], [data-theme="dark"] *) {
+    @slot;
+  }
+  @media (prefers-color-scheme: dark) {
+    &:where(:root:not([data-theme="light"]), :root:not([data-theme="light"]) *) {
+      @slot;
+    }
+  }
+}
+
+/*
  * Design tokens. One font for every language: Kantumruy Pro draws Khmer and Latin
  * with the same weight and rhythm, so mixed Khmer/English lines look like one voice.
+ * Default palette (staff screens): green.
  */
 :root {
   --bg: #f5f3ee;
@@ -21,14 +38,24 @@
   --danger-bg: #fdecea;
   --warn: #b7791f;
   --warn-bg: #fef4e1;
+  /* Roumdoul logo rose (#b46c6c). */
+  --rose: #b46c6c;
+  --rose-strong: #8f4b4b;
+  --rose-soft: #f7ebea;
+  /* Menu hero when the restaurant has no cover photo. */
+  --hero-from: #0d7a5a;
+  --hero-via: #075a42;
+  --hero-to: #0b3b2e;
   --ring: rgb(13 122 90 / 0.35);
   --shadow-sm: 0 1px 2px rgb(21 32 27 / 0.06), 0 1px 1px rgb(21 32 27 / 0.04);
   --shadow-md: 0 6px 20px -6px rgb(21 32 27 / 0.14), 0 2px 6px rgb(21 32 27 / 0.06);
   --shadow-lg: 0 24px 60px -18px rgb(21 32 27 / 0.3), 0 8px 18px -8px rgb(21 32 27 / 0.12);
+  color-scheme: light;
 }
 
+/* Dark tokens: written twice (phone setting, or the guest's choice); keep both blocks the same. */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --bg: #0c1110;
     --surface: #141b19;
     --surface-2: #19211f;
@@ -45,6 +72,9 @@
     --danger-bg: #3a1714;
     --warn: #f3c46b;
     --warn-bg: #362810;
+    --rose: #d79a98;
+    --rose-strong: #ebbcba;
+    --rose-soft: #2a1b1b;
     --ring: rgb(47 180 135 / 0.45);
     --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.4);
     --shadow-md: 0 8px 24px -8px rgb(0 0 0 / 0.6);
@@ -52,6 +82,116 @@
     color-scheme: dark;
   }
 }
+:root[data-theme="dark"] {
+  --bg: #0c1110;
+  --surface: #141b19;
+  --surface-2: #19211f;
+  --fg: #e8eeeb;
+  --muted: #97a59e;
+  --line: #26302d;
+  --chip: #1f2826;
+  --brand: #2fb487;
+  --brand-strong: #5fd0a7;
+  --brand-soft: #143229;
+  --accent: #f0b65e;
+  --accent-soft: #3a2b12;
+  --danger: #ff8a80;
+  --danger-bg: #3a1714;
+  --warn: #f3c46b;
+  --warn-bg: #362810;
+  --rose: #d79a98;
+  --rose-strong: #ebbcba;
+  --rose-soft: #2a1b1b;
+  --ring: rgb(47 180 135 / 0.45);
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.4);
+  --shadow-md: 0 8px 24px -8px rgb(0 0 0 / 0.6);
+  --shadow-lg: 0 28px 70px -20px rgb(0 0 0 / 0.8);
+  color-scheme: dark;
+}
+
+/*
+ * Roumdoul palette for customer pages (menu, home, 404): any page that renders an
+ * element with class "palette-roumdoul". Built from the logo rose with a saffron accent;
+ * warm cream in light, warm charcoal in dark.
+ */
+:root:has(.palette-roumdoul) {
+  --bg: #f8f2ef;
+  --surface: #ffffff;
+  --surface-2: #fcf7f5;
+  --fg: #2b1b1b;
+  --muted: #7c6563;
+  --line: #ecdeda;
+  --chip: #f4e9e6;
+  --brand: #a0504e;
+  --brand-strong: #7d3a39;
+  --brand-soft: #f7e7e5;
+  --accent: #dfa23c;
+  --accent-soft: #fcefd8;
+  --danger: #cc3a1e;
+  --danger-bg: #fde9e3;
+  --warn: #a8701b;
+  --warn-bg: #fdf2de;
+  --hero-from: #b46c6c;
+  --hero-via: #8f4b4b;
+  --hero-to: #4a2525;
+  --ring: rgb(160 80 78 / 0.35);
+  --shadow-sm: 0 1px 2px rgb(43 27 27 / 0.06), 0 1px 1px rgb(43 27 27 / 0.04);
+  --shadow-md: 0 6px 20px -6px rgb(43 27 27 / 0.14), 0 2px 6px rgb(43 27 27 / 0.06);
+  --shadow-lg: 0 24px 60px -18px rgb(43 27 27 / 0.3), 0 8px 18px -8px rgb(43 27 27 / 0.12);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]):has(.palette-roumdoul) {
+    --bg: #130f0f;
+    --surface: #1c1616;
+    --surface-2: #221b1b;
+    --fg: #f4eaea;
+    --muted: #b29f9d;
+    --line: #342a29;
+    --chip: #2a2121;
+    --brand: #e09491;
+    --brand-strong: #f2b8b5;
+    --brand-soft: #3b2324;
+    --accent: #f0b65e;
+    --accent-soft: #3a2b12;
+    --danger: #ff8f6b;
+    --danger-bg: #3d1a12;
+    --warn: #f3c46b;
+    --warn-bg: #362810;
+    --hero-from: #8f4b4b;
+    --hero-via: #5e3030;
+    --hero-to: #2a1515;
+    --ring: rgb(224 148 145 / 0.45);
+    --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.45);
+    --shadow-md: 0 8px 24px -8px rgb(0 0 0 / 0.65);
+    --shadow-lg: 0 28px 70px -20px rgb(0 0 0 / 0.85);
+  }
+}
+:root[data-theme="dark"]:has(.palette-roumdoul) {
+  --bg: #130f0f;
+  --surface: #1c1616;
+  --surface-2: #221b1b;
+  --fg: #f4eaea;
+  --muted: #b29f9d;
+  --line: #342a29;
+  --chip: #2a2121;
+  --brand: #e09491;
+  --brand-strong: #f2b8b5;
+  --brand-soft: #3b2324;
+  --accent: #f0b65e;
+  --accent-soft: #3a2b12;
+  --danger: #ff8f6b;
+  --danger-bg: #3d1a12;
+  --warn: #f3c46b;
+  --warn-bg: #362810;
+  --hero-from: #8f4b4b;
+  --hero-via: #5e3030;
+  --hero-to: #2a1515;
+  --ring: rgb(224 148 145 / 0.45);
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.45);
+  --shadow-md: 0 8px 24px -8px rgb(0 0 0 / 0.65);
+  --shadow-lg: 0 28px 70px -20px rgb(0 0 0 / 0.85);
+}
+
 
 @theme inline {
   --font-sans: "Kantumruy Pro", ui-sans-serif, system-ui, sans-serif;
@@ -71,6 +211,9 @@
   --color-danger-bg: var(--danger-bg);
   --color-warn: var(--warn);
   --color-warn-bg: var(--warn-bg);
+  --color-rose: var(--rose);
+  --color-rose-strong: var(--rose-strong);
+  --color-rose-soft: var(--rose-soft);
   --shadow-soft: var(--shadow-sm);
   --shadow-card: var(--shadow-md);
   --shadow-float: var(--shadow-lg);

@@ -28,6 +28,8 @@ import CartSheet, { CartPanel } from "./cart-sheet";
 import OrdersSheet from "./orders-sheet";
 import Sheet from "./sheet";
 import { SuccessMark } from "./ui";
+import SiteFooter from "./site-footer";
+import ThemeToggle from "./theme-toggle";
 import { useLive } from "@/lib/live";
 
 function isSoldOut(item: MenuItem, now: number): boolean {
@@ -380,7 +382,7 @@ export default function MenuApp({ menu, token }: { menu: TableMenu; token: strin
   };
 
   return (
-    <div className="min-h-dvh pb-32 lg:pb-12">
+    <div className="palette-roumdoul flex min-h-dvh flex-col">
       {/* ---------- Hero: the restaurant's own cover, logo and name ---------- */}
       <header className="relative">
         <div className="relative h-48 overflow-hidden sm:h-64 lg:h-72">
@@ -388,17 +390,19 @@ export default function MenuApp({ menu, token }: { menu: TableMenu; token: strin
             <img src={company.cover_url} alt="" className="absolute inset-0 size-full scale-105 object-cover" />
           ) : (
             <div
-              className="absolute inset-0 bg-[var(--brand)]"
+              className="absolute inset-0 bg-[var(--hero-from)]"
               style={{
                 backgroundImage:
-                  "radial-gradient(circle at 15% 20%, rgb(255 255 255 / .16) 0 2px, transparent 3px), radial-gradient(circle at 80% 0%, rgb(231 163 62 / .55), transparent 45%), linear-gradient(135deg, #0d7a5a 0%, #075a42 55%, #0b3b2e 100%)",
+                  "radial-gradient(circle at 15% 20%, rgb(255 255 255 / .16) 0 2px, transparent 3px), radial-gradient(circle at 80% 0%, rgb(231 163 62 / .55), transparent 45%), linear-gradient(135deg, var(--hero-from) 0%, var(--hero-via) 55%, var(--hero-to) 100%)",
                 backgroundSize: "28px 28px, 100% 100%, 100% 100%",
               }}
             />
           )}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/25 to-black/10" />
+          <div className="absolute inset-0 bg-gradient-to-b from-black/35 via-black/10 to-transparent" />
+          {/* Fade into the page so the restaurant name reads well in light and dark */}
+          <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-[var(--bg)] to-transparent sm:h-28" />
 
-          <div className="relative mx-auto flex h-full w-full max-w-[1440px] items-start justify-end px-4 pt-[calc(env(safe-area-inset-top,0px)+14px)] sm:px-6 lg:px-10">
+          <div className="relative mx-auto flex h-full w-full max-w-[1440px] items-start justify-end gap-2 px-4 pt-[calc(env(safe-area-inset-top,0px)+14px)] sm:px-6 lg:px-10">
             <button
               type="button"
               onClick={() => setLang(lang === "km" ? "en" : "km")}
@@ -408,6 +412,7 @@ export default function MenuApp({ menu, token }: { menu: TableMenu; token: strin
               <Languages className="size-4" />
               {lang === "km" ? "English" : "ខ្មែរ"}
             </button>
+            <ThemeToggle tone="glass" />
           </div>
         </div>
 
@@ -416,7 +421,7 @@ export default function MenuApp({ menu, token }: { menu: TableMenu; token: strin
             {company.logo_url ? (
               <img src={company.logo_url} alt={company.name} className="size-24 rounded-3xl object-cover sm:size-32" />
             ) : (
-              <div className="grid size-24 place-items-center rounded-3xl bg-[var(--brand)] text-4xl font-bold text-white sm:size-32 sm:text-5xl">
+              <div className="grid size-24 place-items-center rounded-3xl bg-[var(--brand)] text-4xl font-bold text-white sm:size-32 sm:text-5xl dark:text-[#06140f]">
                 {company.name.slice(0, 1)}
               </div>
             )}
@@ -441,7 +446,7 @@ export default function MenuApp({ menu, token }: { menu: TableMenu; token: strin
         </div>
       </header>
 
-      <div className="mx-auto w-full max-w-[1440px] px-4 sm:px-6 lg:px-10">
+      <div className="mx-auto w-full max-w-[1440px] px-4 pb-12 sm:px-6 lg:px-10">
         {/* ---------- Service buttons + search ---------- */}
         <div className="mt-5 flex flex-col gap-3 lg:flex-row lg:items-center">
           <div className="grid grid-cols-2 gap-2 sm:flex">
@@ -621,6 +626,9 @@ export default function MenuApp({ menu, token }: { menu: TableMenu; token: strin
           </aside>
         </div>
       </div>
+
+      {/* ---------- Footer: room below for the phone cart bar ---------- */}
+      <SiteFooter themeToggle={false} className={`mt-auto ${count > 0 ? "pb-24 lg:pb-0" : ""}`} />
 
       {/* ---------- Cart bar (phones / tablets) ---------- */}
       {count > 0 && (

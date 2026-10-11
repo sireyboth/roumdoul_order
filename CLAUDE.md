@@ -8,6 +8,7 @@ Read these before larger changes:
 - `docs/architecture.md`: how the parts connect and how data flows (order, menu, money)
 - `docs/database.md`: every table, column, index, plus the planned part B / Step 2 tables
 - `docs/roadmap.md`: what is done, what is next, the exact scope of the next task
+- `docs/user-guide.md`: how each person uses the system (owner setup, customer, kitchen, waiter, cashier, daily checks, troubleshooting). Update it when a screen or label changes
 - `docs/step2-features.md`: how each Step 2 feature should work (upsell pop-up, combos, feedback, multi-language, kiosk, multi-branch, automatic KHQR, split bill)
 
 ## Stack
@@ -36,6 +37,7 @@ php artisan test                   :: must stay green
 php artisan schedule:work          :: Telegram day-end summary (start.bat opens it)
 php artisan reverb:start           :: live updates on :8080 (start.bat opens it; screens poll without it)
 php artisan reports:rebuild        :: recompute report tables (optionally a date)
+php artisan admin:create           :: platform admin on a server (no demo data); rerun to reset password
 
 :: frontend (second terminal)
 cd frontend
@@ -75,7 +77,7 @@ Demo logins (password `password`): `owner@roumdoul.test` (/app, manager PIN `123
 - `app/Jobs/RebuildDailySales`, `app/Console/Commands` – `reports:rebuild`, `reports:daily-summary` (scheduled every 15 min in `routes/console.php`).
 - `app/Support/Live` + `app/Events/BranchChanged|TableChanged` + `routes/channels.php` – live updates (no data in events; screens re-fetch).
 - `app/Http/Middleware/UseCompanyTimezone` – back office shows times in the company time zone.
-- `app/Support` – `Money` (incl. riel rounding/conversion), `QrCode`, `Tenant`, `TenantScope`, `StaffAccess`, `ManagerPin` (owner/manager PIN approval, rate-limited).
+- `app/Support` – `Money` (incl. riel rounding/conversion), `QrCode`, `Tenant`, `TenantScope`, `StaffAccess`, `ManagerPin` (owner/manager PIN approval, rate-limited), `SignInBlock` (right password but not allowed in: says why and who can fix it; used by `Filament/Auth/Login` for /admin + /app and by the staff login. Wrong passwords keep the plain message).
 - `app/Enums` – `OrderStatus`, `StaffRole`, `CompanyStatus`, `Station`, `BillStatus`, `PaymentMethod`.
 - `app/Http/Controllers/Api` – `PublicMenuController`, `PublicOrderController`, `StaffAuthController`, `StaffBoardController`, `StaffCashierController` (cashier tables/bills/payments + waiter orders), `StaffShiftController` (cash drawer), `StaffPrintController` (receipt / ticket data), `StaffFloorController` (floor plan: GET any staff, PUT owner/manager).
 - `app/Filament/App/Resources` – Branches (+ Areas, Menu availability relation managers on the `ViewBranch` "Areas & menu" page), DiningTables (QR, add many), Categories, MenuItems, OptionGroups, Staff, Orders, Shifts (read-only), DailySales (read-only + CSV export actions). `app/Filament/App/Widgets` – SalesOverview, SalesChart, PaymentMethodsChart, BestSellers, SetupOverview.
@@ -86,6 +88,7 @@ Demo logins (password `password`): `owner@roumdoul.test` (/app, manager PIN `123
 
 - `src/app/t/[token]/page.tsx` – customer menu (server) → `components/menu-app.tsx` (client: hero with the restaurant's cover/logo/name, search, cart, "Goes well with" pop-up after adding, send order, tracking, call waiter). Desktop: categories left, items grid, cart panel right (`CartPanel`); phones: chips + bottom cart bar.
 - Design system: tokens + animation classes (`anim-fade-up` with `--i` stagger, `anim-pop`, `skeleton`, ...) in `src/app/globals.css`; shared `components/ui.tsx` (Button, Badge, Alert, Field, EmptyState, SuccessMark) and `components/sheet.tsx` (animated, `size` md/lg/xl). Icons: `lucide-react` only, **no emoji**. One font (Kantumruy Pro) for Khmer and Latin. Staff screens use `components/staff/chrome.tsx` (`PAGE` wide container, `BackLink`).
+- Colours: staff screens = green palette; customer pages wrap in `.palette-roumdoul` (logo rose + saffron, via `:root:has(.palette-roumdoul)`). Light/dark follows the phone unless the guest taps `ThemeToggle` (`<html data-theme>`, `lib/theme.ts`, no-flash script in `layout.tsx`); `dark:` utilities follow the same rule. Dark tokens are written twice in `globals.css` (media query + `data-theme`), keep both in sync. Use tokens (`var(--brand)` ...), never hard-coded hex. Every customer page ends with `components/site-footer.tsx`.
 - Floor plan: `lib/floor.ts` (object kinds, floor materials, chair placement; units are cm), `components/floor/floor-stage.tsx` (CSS 3D diorama, 2D/3D, drag/resize/zoom/pan), `floor-editor.tsx` (`/staff/floor`, owners/managers), `components/staff/floor-view.tsx` (cashier's live plan).
 - `src/app/staff/*` – sign-in + `kitchen` (columns New/Preparing/Ready, timers, chime) + `waiter` (calls, ready to serve, sold-out) + `waiter/order` (new order for a table, reuses `ItemSheet`) + `cashier` (tables grid → bill sheet → `pay-panel`, `pin-form`; `shift-sheet` for the drawer) + `print/receipt`, `print/ticket` (80 mm, `use-print` hook).
 - `src/app/api/t/...` and `src/app/api/staff/...` – proxies to Laravel (`lib/backend.ts`).
@@ -119,3 +122,8 @@ Step 0 and all of Step 1 (part A, and part B: bills & payments, cashier screen, 
 - **Translations:** today `categories` and `menu_items` have `name_km`, `name_en`, `name_zh`, but `option_groups` and `options` only have `name_km`, `name_en` (inconsistent). Recommended fix in B1: switch all four tables to one JSON `name` column per field (`{"km": "...", "en": "...", "zh": "..."}`, e.g. `spatie/laravel-translatable`), with `companies.languages` choosing which languages a restaurant uses and a fallback order en → km. Do not add more `name_xx` columns until the owner decides.
 
 Write user-facing text in plain language; Khmer + English on customer screens.
+
+## Online docs
+
+The online reference page (features, diagrams, all tables, user guide) is https://claude.ai/artifact/XFXdQJczECUWxJoNUX5Rvi. Its "How to use" section matches `docs/user-guide.md`.
+                                          

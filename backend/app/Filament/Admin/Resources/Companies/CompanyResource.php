@@ -6,11 +6,14 @@ use App\Enums\CompanyStatus;
 use App\Filament\Admin\Resources\Companies\Pages\ListCompanies;
 use App\Models\Company;
 use App\Models\Plan;
+use App\Models\Subscription;
 use BackedEnum;
+use Filament\Actions\Action;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
+use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Schema;
@@ -65,7 +68,61 @@ class CompanyResource extends Resource
             ])
             ->recordActions([
                 EditAction::make(),
+                Action::make('changePlan')
+                    ->label('Change plan')
+                    ->icon(Heroicon::OutlinedArrowsRightLeft)
+                    ->modalDescription('Limits change right away. If the restaurant already has more branches, tables or staff than the new plan allows, nothing is removed; it just cannot add more.')
+                    ->fillForm(fn (Company $record) => ['plan_id' => $record->subscription?->plan_id])
+                    ->schema([
+                        Select::make('plan_id')
+                            ->label('Plan')
+                            ->options(fn () => Plan::query()->where('is_active', true)->orderBy('sort_order')->pluck('name', 'id'))
+                            ->required(),
+                    ])
+                    ->action(fn (Company $record, array $data) => static::changePlan($record, Plan::query()->findOrFail($data['plan_id']))),
             ]);
+    }
+
+    /** Moves a restaurant to another plan (the subscription change is audit-logged). */
+    public static function changePlan(Company $company, Plan $plan): void
+    {
+        $subscription = $company->subscription;
+
+        if ($subscription) {
+            $subscription->update(['plan_id' => $plan->id]);
+        } else {
+            Subscription::query()->create([
+                'company_id' => $company->id,
+                'plan_id' => $plan->id,
+                'status' => $company->status === CompanyStatus::Trial ? 'trialing' : 'active',
+                'interval' => 'monthly',
+                'starts_at' => now(),
+                'ends_at' => $company->status === CompanyStatus::Trial ? $company->trial_ends_at : null,
+            ]);
+        }
+
+        $company->unsetRelation('subscription');
+
+        $over = collect(['branches', 'tables', 'staff'])
+            ->filter(fn (string $resource) => $company->limitFor($resource) !== null
+                && static::countOf($company, $resource) > $company->limitFor($resource));
+
+        $notification = Notification::make()->title("{$company->name} is now on {$plan->name}");
+
+        $over->isEmpty()
+            ? $notification->success()
+            : $notification->warning()->body('Already over the new limit for: '.$over->implode(', ').'. Nothing was removed.');
+
+        $notification->send();
+    }
+
+    private static function countOf(Company $company, string $resource): int
+    {
+        return match ($resource) {
+            'branches' => $company->branches()->count(),
+            'tables' => $company->diningTables()->count(),
+            'staff' => $company->memberships()->count(),
+        };
     }
 
     public static function getPages(): array

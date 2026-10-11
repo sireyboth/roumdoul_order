@@ -123,4 +123,7 @@ return [
         'store' => env('APP_MAINTENANCE_STORE', 'database'),
     ],
 
+    // Free trial length (days) for new restaurants: self sign-up and /admin "Add restaurant".
+    'trial_days' => (int) env('TRIAL_DAYS', 14),
+
 ];
