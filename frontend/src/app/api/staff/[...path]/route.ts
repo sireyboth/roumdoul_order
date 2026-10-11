@@ -1,5 +1,6 @@
 import { forward } from "@/lib/backend";
 
+
 /** Staff screen calls, forwarded with the staff member's sign-in token. */
 async function handle(req: Request, ctx: RouteContext<"/api/staff/[...path]">) {
   const { path } = await ctx.params;
