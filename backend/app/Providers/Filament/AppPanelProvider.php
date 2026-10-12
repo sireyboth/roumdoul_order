@@ -44,6 +44,7 @@ class AppPanelProvider extends PanelProvider
             ->registration()
             ->passwordReset()
             ->profile()
+            ->spa()
             ->tenant(Company::class, slugAttribute: 'slug', ownershipRelationship: 'company')
             ->tenantRegistration(RegisterCompany::class)
             ->tenantProfile(EditCompanyProfile::class)
