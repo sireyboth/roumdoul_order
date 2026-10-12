@@ -106,6 +106,7 @@ Demo logins (password `password`): `owner@roumdoul.test` (/app, manager PIN `123
 - Staff API tests: call `$this->app['auth']->forgetGuards()` before switching tokens, or the previous user stays signed in.
 - Next.js ESLint flags `setState` inside `useEffect`; schedule the first poll with `setTimeout(..., 0)` or disable the rule for storage reads with a comment.
 - Dev PC is **Windows + XAMPP (MariaDB 10.4)**: no `pcntl` (no Horizon locally), no Redis by default. Keep things working with `CACHE_STORE=database` and `QUEUE_CONNECTION=database`. Use `dispatch(...)->afterResponse()` for small side jobs.
+- **Uploaded pictures:** always use `App\Support\Uploads` (`->disk(Uploads::disk())`, `Uploads::url($path)`), never `disk('public')`. Production runs on **Laravel Cloud**, whose server disk is wiped on every deploy: uploads must go to a public bucket (`UPLOADS_DISK=<bucket disk>`); `storage:link` does not help there.
 - XAMPP MySQL crashed once from damaged system tables; fix was replacing `C:\xampp\mysql\data` with `C:\xampp\mysql\backup` (keep project DB folders).
 
 ## Testing expectations

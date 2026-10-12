@@ -2,6 +2,7 @@
 
 namespace App\Filament\App\Resources\Categories;
 
+use App\Support\Uploads;
 use App\Filament\App\Resources\Categories\Pages\ListCategories;
 use App\Models\Category;
 use BackedEnum;
@@ -37,7 +38,7 @@ class CategoryResource extends Resource
             TextInput::make('name_km')->label('Name (Khmer)')->required()->maxLength(120),
             TextInput::make('name_en')->label('Name (English)')->required()->maxLength(120),
             TextInput::make('name_zh')->label('Name (Chinese)')->maxLength(120),
-            FileUpload::make('image_path')->label('Image')->image()->disk('public')->directory('categories')->maxSize(2048),
+            FileUpload::make('image_path')->label('Image')->image()->disk(Uploads::disk())->directory('categories')->maxSize(2048),
             Toggle::make('is_active')->label('Show on menu')->default(true),
         ]);
     }
@@ -48,7 +49,7 @@ class CategoryResource extends Resource
             ->defaultSort('sort_order')
             ->reorderable('sort_order')
             ->columns([
-                ImageColumn::make('image_path')->label('')->disk('public')->square()->size(40),
+                ImageColumn::make('image_path')->label('')->disk(Uploads::disk())->square()->size(40),
                 TextColumn::make('name_km')->label('Khmer')->searchable()->weight('bold'),
                 TextColumn::make('name_en')->label('English')->searchable()->visibleFrom('sm'),
                 TextColumn::make('menu_items_count')->label('Items')->counts('menuItems')->badge(),

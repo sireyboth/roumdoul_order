@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Support\Uploads;
 use App\Models\Branch;
 use App\Models\BranchMenuItem;
 use App\Models\Category;
@@ -10,7 +11,6 @@ use App\Models\DiningTable;
 use App\Models\MenuItem;
 use App\Services\Ordering\LocationCheck;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Storage;
 
 /**
  * Builds the menu a customer sees after scanning a table QR.
@@ -95,8 +95,8 @@ class MenuBuilder
         return [
             'company' => [
                 'name' => $company->name,
-                'logo_url' => $company->logo_path ? Storage::disk('public')->url($company->logo_path) : null,
-                'cover_url' => $company->cover_path ? Storage::disk('public')->url($company->cover_path) : null,
+                'logo_url' => Uploads::url($company->logo_path),
+                'cover_url' => Uploads::url($company->cover_path),
                 'tagline' => $company->tagline,
                 'currency' => $company->currency,
                 'khr_per_usd' => $company->khr_per_usd,
@@ -241,6 +241,6 @@ class MenuBuilder
 
     private function imageUrl(?string $path): ?string
     {
-        return $path ? Storage::disk('public')->url($path) : null;
+        return Uploads::url($path);
     }
 }

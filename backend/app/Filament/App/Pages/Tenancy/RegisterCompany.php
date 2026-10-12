@@ -2,6 +2,7 @@
 
 namespace App\Filament\App\Pages\Tenancy;
 
+use App\Support\Uploads;
 use App\Models\Company;
 use App\Models\User;
 use App\Services\CompanyProvisioner;
@@ -31,7 +32,7 @@ class RegisterCompany extends RegisterTenant
                 ->label('Logo')
                 ->helperText('Shown at the top of your customer menu.')
                 ->image()
-                ->disk('public')
+                ->disk(Uploads::disk())
                 ->directory('logos')
                 ->maxSize(2048)
                 ->required(),
@@ -43,7 +44,7 @@ class RegisterCompany extends RegisterTenant
                 ->label('Cover photo')
                 ->helperText('A wide photo of your shop or food, shown behind your name on the menu.')
                 ->image()
-                ->disk('public')
+                ->disk(Uploads::disk())
                 ->directory('covers')
                 ->maxSize(4096),
             TextInput::make('phone')

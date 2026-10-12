@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Support\Uploads;
 use App\Enums\OrderStatus;
 use App\Enums\StaffRole;
 use App\Http\Controllers\Controller;
@@ -17,7 +18,6 @@ use App\Support\Money;
 use App\Support\StaffAccess;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 
 /** What the 80 mm print pages need: the customer's bill / receipt and kitchen or bar tickets. */
@@ -48,8 +48,8 @@ class StaffPrintController extends Controller
         return response()->json(['data' => [
             'company' => [
                 'name' => $company->name,
-                'logo_url' => $company->logo_path ? Storage::disk('public')->url($company->logo_path) : null,
-                'khqr_url' => $company->khqr_image_path ? Storage::disk('public')->url($company->khqr_image_path) : null,
+                'logo_url' => Uploads::url($company->logo_path),
+                'khqr_url' => Uploads::url($company->khqr_image_path),
             ],
             'branch' => [
                 'name' => $branch->name,

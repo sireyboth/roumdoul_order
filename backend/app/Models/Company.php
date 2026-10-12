@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\Uploads;
 use App\Enums\CompanyStatus;
 use App\Models\Concerns\Auditable;
 use Filament\Models\Contracts\HasAvatar;
@@ -11,7 +12,6 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Illuminate\Support\Facades\Storage;
 
 class Company extends Model implements HasAvatar, HasName
 {
@@ -39,7 +39,7 @@ class Company extends Model implements HasAvatar, HasName
 
     public function getFilamentAvatarUrl(): ?string
     {
-        return $this->logo_path ? Storage::disk('public')->url($this->logo_path) : null;
+        return Uploads::url($this->logo_path);
     }
 
     public function memberships(): HasMany

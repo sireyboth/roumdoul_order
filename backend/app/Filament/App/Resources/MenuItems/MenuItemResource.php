@@ -2,6 +2,7 @@
 
 namespace App\Filament\App\Resources\MenuItems;
 
+use App\Support\Uploads;
 use App\Enums\Station;
 use App\Filament\App\Resources\MenuItems\Pages\ListMenuItems;
 use App\Models\MenuItem;
@@ -104,7 +105,7 @@ class MenuItemResource extends Resource
                             ->hiddenLabel()
                             ->image()
                             ->imageEditor()
-                            ->disk('public')
+                            ->disk(Uploads::disk())
                             ->directory('menu')
                             ->maxSize(3072),
                     ]),
@@ -154,7 +155,7 @@ class MenuItemResource extends Resource
             ->defaultSort('sort_order')
             ->reorderable('sort_order')
             ->columns([
-                ImageColumn::make('image_path')->label('')->disk('public')->square()->size(44),
+                ImageColumn::make('image_path')->label('')->disk(Uploads::disk())->square()->size(44),
                 TextColumn::make('name_km')
                     ->label('Item')
                     ->description(fn (MenuItem $record) => $record->name_en)

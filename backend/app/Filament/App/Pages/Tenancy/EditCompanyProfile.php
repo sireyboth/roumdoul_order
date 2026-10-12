@@ -2,6 +2,7 @@
 
 namespace App\Filament\App\Pages\Tenancy;
 
+use App\Support\Uploads;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
@@ -34,21 +35,21 @@ class EditCompanyProfile extends EditTenantProfile
                         ->label('Logo')
                         ->helperText('Shown at the top of your customer menu.')
                         ->image()
-                        ->disk('public')
+                        ->disk(Uploads::disk())
                         ->directory('logos')
                         ->maxSize(2048),
                     FileUpload::make('cover_path')
                         ->label('Cover photo')
                         ->helperText('A wide photo of your shop or food, shown behind your name on the menu.')
                         ->image()
-                        ->disk('public')
+                        ->disk(Uploads::disk())
                         ->directory('covers')
                         ->maxSize(4096),
                     FileUpload::make('khqr_image_path')
                         ->label('KHQR code (picture)')
                         ->helperText('The KHQR your bank gave the shop. It is printed on bills so customers can scan and pay.')
                         ->image()
-                        ->disk('public')
+                        ->disk(Uploads::disk())
                         ->directory('khqr')
                         ->maxSize(2048),
                 ]),
