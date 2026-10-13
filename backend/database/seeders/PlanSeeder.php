@@ -35,6 +35,14 @@ class PlanSeeder extends Seeder
                 'price_monthly_cents' => 9900, 'price_yearly_cents' => 99000,
                 'features' => ['telegram', 'printing', 'export', 'khqr_auto', 'upsell', 'combos', 'kiosk', 'multi_branch_reports'],
             ],
+            [
+                // No monthly fee: charged per order. The start page shows only "From $0.01 per order".
+                'code' => 'per_order', 'name' => 'Pay per order', 'sort_order' => 4,
+                'description' => 'No monthly fee. Pay only when guests order.',
+                'max_branches' => null, 'max_tables' => null, 'max_staff' => null,
+                'price_monthly_cents' => 0, 'price_yearly_cents' => 0, 'price_per_order_cents' => 1,
+                'features' => [],
+            ],
         ];
 
         foreach ($plans as $plan) {

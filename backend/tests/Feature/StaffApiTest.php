@@ -87,6 +87,19 @@ class StaffApiTest extends TestCase
         $this->withToken($token)->postJson("/api/staff/orders/{$order->id}/status", ['status' => 'placed'])->assertStatus(422);
     }
 
+    public function test_kitchen_can_serve_a_ready_order_when_no_waiter_is_free(): void
+    {
+        $order = $this->placeOrder();
+        $token = $this->token('kitchen@roumdoul.test');
+
+        foreach (['preparing', 'ready', 'served'] as $next) {
+            $this->withToken($token)->postJson("/api/staff/orders/{$order->id}/status", ['status' => $next])->assertOk();
+        }
+
+        $this->assertSame('served', $order->fresh()->status->value);
+        $this->assertNotNull($order->fresh()->served_at);
+    }
+
     public function test_kitchen_cannot_cancel_but_cashier_can_with_a_reason(): void
     {
         $order = $this->placeOrder();

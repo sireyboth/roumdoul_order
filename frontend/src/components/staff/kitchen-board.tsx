@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { BellRing, Check, ChefHat, CircleAlert, Clock, CupSoda, Flame, Layers, Play, Printer, StickyNote, Timer, Volume2, Wifi, WifiOff, type LucideIcon } from "lucide-react";
+import { BellRing, Check, ChefHat, CircleAlert, Clock, CupSoda, Flame, HandPlatter, Layers, Play, Printer, StickyNote, Timer, Volume2, Wifi, WifiOff, type LucideIcon } from "lucide-react";
 import { chime, since, staffApi, ticketUrl, type BoardOrder } from "@/lib/staff";
 import { useBoard } from "./use-board";
 import { BackLink, SignedOutScreen } from "./chrome";
@@ -17,6 +17,8 @@ const NEXT: Partial<Record<BoardOrder["status"], { status: string; label: string
   placed: { status: "preparing", label: "Start" },
   accepted: { status: "preparing", label: "Start" },
   preparing: { status: "ready", label: "Ready" },
+  // No waiter free? The kitchen can serve it too.
+  ready: { status: "served", label: "Served" },
 };
 
 const STATIONS: { value: "kitchen" | "bar" | null; label: string; icon: LucideIcon }[] = [
@@ -253,10 +255,10 @@ export default function KitchenBoard({ branchId, station }: { branchId: number; 
                         disabled={moving === order.id}
                         onClick={() => move(order, next.status)}
                         className={`flex h-14 items-center justify-center gap-2 rounded-2xl text-lg font-bold text-black transition active:scale-[0.98] disabled:opacity-50 ${
-                          next.status === "ready" ? "bg-emerald-400 hover:bg-emerald-300" : "bg-sky-300 hover:bg-sky-200"
+                          next.status === "ready" ? "bg-emerald-400 hover:bg-emerald-300" : next.status === "served" ? "bg-white hover:bg-white/85" : "bg-sky-300 hover:bg-sky-200"
                         }`}
                       >
-                        {next.status === "ready" ? <Check className="size-5" strokeWidth={3} aria-hidden /> : <Play className="size-5" aria-hidden />}
+                        {next.status === "ready" ? <Check className="size-5" strokeWidth={3} aria-hidden /> : next.status === "served" ? <HandPlatter className="size-5" aria-hidden /> : <Play className="size-5" aria-hidden />}
                         {moving === order.id ? "Saving..." : next.label}
                       </button>
                     ) : (

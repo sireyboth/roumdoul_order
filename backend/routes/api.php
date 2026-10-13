@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\PublicMenuController;
 use App\Http\Controllers\Api\PublicOrderController;
+use App\Http\Controllers\Api\PublicPlanController;
 use App\Http\Controllers\Api\StaffAuthController;
 use App\Http\Controllers\Api\StaffBoardController;
 use App\Http\Controllers\Api\StaffCashierController;
@@ -11,6 +12,9 @@ use App\Http\Controllers\Api\StaffShiftController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/health', fn () => ['ok' => true]);
+
+// Price list for the public start page.
+Route::get('/public/plans', [PublicPlanController::class, 'index'])->middleware('throttle:public-site');
 
 // Customers: no login. Everything is found from the table's QR token.
 Route::prefix('public/tables/{token}')

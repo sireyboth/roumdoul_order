@@ -15,7 +15,7 @@ const SOCIALS = [
   { name: "Telegram", href: "#", icon: TelegramIcon },
 ];
 
-const PHONES = ["+855 15 57 87 07", "+855 71 26 000 78"];
+export const PHONES = ["+855 15 57 87 07", "+855 71 26 000 78"];
 
 export default function SiteFooter({ className = "", themeToggle = true }: { className?: string; themeToggle?: boolean }) {
   return (

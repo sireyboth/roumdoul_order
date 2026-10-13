@@ -34,7 +34,7 @@ For phones to reach the system, open it with the computer's Wi-Fi address (e.g. 
 Your own panel to run the business: plans and every restaurant on the platform.
 
 1. **Sign in**: `admin@roumdoul.test` / password on the demo.
-2. **Set your prices**: Plans: monthly / yearly price, how many branches, tables and staff, which features. The demo prices ($19 / $39 / $99) are placeholders.
+2. **Set your prices**: Plans: monthly / yearly price, how many branches, tables and staff, which features. The demo prices ($19 / $39 / $99) are placeholders. Active plans show on the public start page (the frontend home page, e.g. tok.roumdoul.com) in sort order, within about a minute of saving. Feature keys `khqr_auto`, `combos`, `kiosk`, `multi_branch_reports` are shown there as "Coming soon". A plan with **Price / order** filled is a pay-per-order plan (demo: "Pay per order", $0.01): the start page shows only "From $0.01 / order" and a Call us button, no limits or features, so competitors don't see the details.
 3. **Add a restaurant yourself (after a sales visit)**: Restaurants → Add restaurant: name, first branch, currency, plan, owner name, email and password. They can then sign in at /app.
 4. **Or let them sign up**: Owners can register themselves at `/app/register` and get a free trial (14 days by default; change it with `TRIAL_DAYS` in `backend/.env`).
 5. **Manage restaurants**: Edit to change status (trial, active, suspended, cancelled) or the trial end date. When the trial ends, or the restaurant is suspended or cancelled, its QR codes and staff screens stop working. Set **Active** once they pay.
@@ -91,7 +91,7 @@ A tablet or TV by the kitchen and another at the bar. Food goes to Kitchen, drin
 1. **Sign in**: `/staff` with the email and password from the manager, then pick Kitchen (or Bar, or All).
 2. **Turn on sound**: Tap “Turn on sound” once so new orders chime.
 3. **New order arrives**: Card shows table, order number, items with options and notes, and a timer (amber after 10 min, red after 15).
-4. **Start → Ready**: Tap Start when cooking begins and Ready when it is done. The waiter and the customer see it straight away.
+4. **Start → Ready → Served**: Tap Start when cooking begins and Ready when it is done. The waiter and the customer see it straight away. No waiter free? Tap **Served** on the Ready card once the food is at the table (the waiter can do the same on their screen).
 5. **Print a ticket**: Printer button on a card, or turn on automatic kitchen tickets in the branch settings.
 
 ## Waiter

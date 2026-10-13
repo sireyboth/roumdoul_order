@@ -17,6 +17,7 @@ Diagrams: the "Roumdoul Order System" page, https://claude.ai/artifact/XFXdQJczE
 - Only Laravel writes to the database.
 - Next.js holds no data; it renders and proxies. `API_URL` is server-only.
 - Rate limits are per QR token (`public-read` 240/min, `public-write` 20/min), because all customer traffic reaches Laravel from the Next.js server's IP.
+- Start page `/` (sales page for restaurant owners): server component reads `GET /api/public/plans` (active plans, prices in cents, `throttle:public-site`) with a 60 s revalidate, so price changes in /admin > Plans show within a minute. "Start free trial" links to `{API_URL}/app/register`. Every `/staff/*` screen gets the Roumdoul footer from `app/staff/layout.tsx` (not the 80 mm print pages).
 
 ## Who uses what
 
@@ -24,6 +25,7 @@ Step-by-step instructions for each role are in `docs/user-guide.md`.
 
 | Person | Screen | Auth |
 |---|---|---|
+| Restaurant owner (prospect) | `/` start page: prices, features, free trial | none |
 | Customer | `/t/{qr_token}` | none – the token is the identity |
 | Kitchen / bar | `/staff/kitchen?branch=&station=` | staff login → Sanctum token (localStorage) |
 | Waiter | `/staff/waiter?branch=` | same |

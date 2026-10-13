@@ -64,6 +64,7 @@ Price list and limits (branches, tables, staff) plus feature keys. Edited in `/a
 | `max_staff` | integer | yes |  |  |
 | `price_monthly_cents` | integer |  | 0 |  |
 | `price_yearly_cents` | integer |  | 0 |  |
+| `price_per_order_cents` | integer | yes |  |  |
 | `currency` | varchar |  | USD |  |
 | `features` | text | yes |  |  |
 | `is_active` | tinyint |  | 1 |  |

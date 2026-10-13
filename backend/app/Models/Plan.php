@@ -12,7 +12,7 @@ class Plan extends Model
 
     protected $fillable = [
         'code', 'name', 'description', 'max_branches', 'max_tables', 'max_staff',
-        'price_monthly_cents', 'price_yearly_cents', 'currency', 'features', 'is_active', 'sort_order',
+        'price_monthly_cents', 'price_yearly_cents', 'price_per_order_cents', 'currency', 'features', 'is_active', 'sort_order',
     ];
 
     protected function casts(): array

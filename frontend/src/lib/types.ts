@@ -117,3 +117,19 @@ export type TableSessionState = {
   /** Reverb channel for instant updates; null when live updates are off. */
   live_channel: string | null;
 };
+
+/** A price plan on the start page (GET /api/public/plans). Limits: null = unlimited. Prices in minor units. */
+export type Plan = {
+  code: string;
+  name: string;
+  description: string | null;
+  max_branches: number | null;
+  max_tables: number | null;
+  max_staff: number | null;
+  price_monthly: number;
+  price_yearly: number;
+  /** Set only on a pay-per-order plan (shown as "From $x per order", no details). */
+  price_per_order: number | null;
+  currency: string;
+  features: string[];
+};
