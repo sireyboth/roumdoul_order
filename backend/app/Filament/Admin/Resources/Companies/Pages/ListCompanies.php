@@ -29,6 +29,8 @@ class ListCompanies extends ListRecords
                     TextInput::make('branch_name')->label('First branch')->default('Main branch')->required(),
                     Select::make('currency')->options(['USD' => 'USD', 'KHR' => 'KHR'])->default('USD')->required(),
                     Select::make('plan')->options(fn () => Plan::query()->where('is_active', true)->pluck('name', 'code'))->default('starter'),
+                    TextInput::make('phone')->label('Phone')->tel()->required()->maxLength(30),
+                    TextInput::make('contact_telegram')->label('Telegram')->placeholder('@username or phone')->maxLength(64),
                     TextInput::make('owner_name')->required(),
                     TextInput::make('owner_email')->email()->required(),
                     TextInput::make('owner_password')->password()->revealable()->minLength(8)

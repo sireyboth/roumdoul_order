@@ -2,10 +2,12 @@
 
 namespace App\Filament\App\Pages\Tenancy;
 
-use App\Support\Uploads;
 use App\Models\Company;
 use App\Models\User;
 use App\Services\CompanyProvisioner;
+use App\Services\Subscriptions\PlatformAlerts;
+use App\Support\Terms;
+use App\Support\Uploads;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
@@ -49,8 +51,15 @@ class RegisterCompany extends RegisterTenant
                 ->maxSize(4096),
             TextInput::make('phone')
                 ->label('Phone')
+                ->helperText('The Roumdoul team calls you here to help you set up.')
                 ->tel()
+                ->required()
                 ->maxLength(30),
+            TextInput::make('contact_telegram')
+                ->label('Telegram')
+                ->placeholder('@username or phone')
+                ->helperText('Optional. We message you here about your plan and payments.')
+                ->maxLength(64),
             TextInput::make('branch_name')
                 ->label('First branch name')
                 ->placeholder('e.g. BKK1')
@@ -62,6 +71,7 @@ class RegisterCompany extends RegisterTenant
                 ->options(['USD' => 'US Dollar ($)', 'KHR' => 'Khmer Riel (៛)'])
                 ->default('USD')
                 ->required(),
+            Terms::checkbox(),
         ]);
     }
 
@@ -70,7 +80,13 @@ class RegisterCompany extends RegisterTenant
         /** @var User $user */
         $user = Auth::user();
 
-        return app(CompanyProvisioner::class)->create($data, $user);
+        $company = app(CompanyProvisioner::class)->create($data, $user);
+        Terms::record($company, $user, Terms::SIGNUP, 'Registered '.$company->name.' (free trial)');
+
+        // Tell the Roumdoul team so they can call and help with the setup.
+        app(PlatformAlerts::class)->newRestaurant($company, $user);
+
+        return $company;
     }
 
     public function getModel(): string

@@ -69,28 +69,24 @@ Browser print, 80 mm layout: customer receipt (company, branch, items, totals, r
 ### B6 – live updates ✅ done (7 Oct 2026)
 Laravel Reverb + Echo in Next.js: channels `branch.{id}` (staff, private) and `table.{token-hash}` (customer). Keep polling as a fallback.
 
-## Plans: feature locking, then billing
+## Plans: feature locking and billing ✅ done (13 Oct 2026)
 
-### C1 – feature locking (next)
-The list of plan features and whether each is built live in `App\Enums\Feature` (start page shows unbuilt ones as "Coming soon"); names/order in `/admin > Plan features`, which plan has which in `/admin > Plans`. Today nothing checks them: every restaurant can use every built feature. To do:
-- `Company::hasFeature(Feature)` reads the current plan (via the subscription), so ticking a feature on a plan applies to every restaurant on it at once.
-- **Owner back office:** show a missing feature **locked** with "Available on <plan>. Call us to upgrade".
-- **Staff screens and customer pages:** **hide** it (staff can't upgrade; guests never see upgrade messages).
-- **Server refuses too:** staff/public APIs answer 403 + `code: feature_not_in_plan`, like `StaffAccess` does for roles.
-- Built features: printing (hide Print buttons; lock printer settings), export (lock CSV actions), telegram (lock settings, skip the day-end summary), upsell (lock the suggestions field, no "Goes well with" pop-up). Printing stays a plan feature (owner's decision, 13 Oct 2026).
-- Moving to a smaller plan deletes nothing: data is kept, just not shown, and comes back on upgrade.
-- A test fails if a feature is used in the code but not marked built, or marked built but never checked.
+### C1 – feature locking ✅
+- `App\Enums\Feature` = the list and which are built (start page "Coming soon" otherwise); names/order in `/admin > Plan features`, which plan has which in `/admin > Plans`. `Company::hasFeature()` reads the current plan live: ticking a feature on a plan applies to every restaurant on it at once.
+- Owner back office: missing features **locked** with "Available on <plan>" (`FeatureGate`). Staff screens and customer pages: **hidden**. Server refuses too (print endpoints: 403 `feature_not_in_plan`).
+- Printing (Print buttons, auto-print, printer settings), export (CSV actions), Telegram (settings, new-order alerts, day-end summary), upsell ("Goes well with" field and pop-up). Printing stays a plan feature (owner, 13 Oct 2026).
+- A smaller plan deletes nothing; everything comes back on upgrade. `PlanBillingTest` fails if a built feature is never checked or a planned one is used.
 
-### C2 – billing restaurants (when there are ~5–10 paying restaurants; until then by hand)
+### C2 – billing restaurants ✅ (manual payment)
 Rules decided with the owner (13 Oct 2026):
-- **Upgrade** (e.g. Starter → Pro): starts **at once**; pay only the difference for the days left in the period: `(new price − old price) × days left ÷ days in period`, in cents, rounded down. Starter $19 → Pro $39 on day 16 of 30: pay $10 now, $39 at the next renewal. The renewal date does not change. Yearly plans: same with days in the year.
-- **Downgrade** (e.g. Pro → Starter): starts at the **next renewal**; **no refund**. They keep Pro until the end of the period already paid.
-- **Snapshot the price** on the subscription when it starts, so later price changes in `/admin > Plans` don't change what existing restaurants pay.
-- **Keep history:** a plan change ends the old subscription and starts a new one (today `CompanyResource::changePlan` overwrites `plan_id`; fix this). Every charge is an invoice row, never deleted (void with a reason).
-- Payment: first **manual** (ABA / KHQR transfer, platform admin confirms in `/admin`), automatic check later. Optional grace: upgrade now, pay within 3 days, else back to the old plan.
-- Still to decide: renewal reminders and what happens when a restaurant doesn't pay (grace days, then read-only?).
+- **Upgrade**: pay only the difference for the days left, `(new − old) × days left ÷ days in period`, in cents, rounded down (Starter $19 → Pro $39 on day 16 of 31 = $10.32). Starts once the payment is confirmed; renewal date unchanged. Monthly → yearly starts a new year now: yearly price minus the unused part of the month.
+- **Downgrade**: at the **next renewal**, **no refund**; can be cancelled until then.
+- Price **snapshot** on each subscription; a plan change ends the row and starts a new one (history kept). Invoices (`plan_invoices`) never deleted, voided with a reason.
+- Both ways: the Roumdoul team in `/admin > Restaurants > Change plan` (can mark "already paid"), the owner on `/app > Your plan` (pays with the ABA QR from `/admin > Payment settings`, "I have paid" + screenshot). The team confirms in `/admin > Plan invoices`.
+- Renewal invoices 3 days before the period ends (`subscriptions:run`, hourly). **Not paid 3 days after the due date: back office read-only** (orders and staff screens keep working) until paid.
+- Every step goes to the team Telegram group with the restaurant's phone / Telegram (`PLATFORM_TELEGRAM_CHAT_ID`). Sign-up asks for phone (required) and Telegram.
 
-**Until C2 is built:** note payments by hand; on an upgrade, work out the difference with the rule above and use **Change plan** in `/admin > Restaurants`.
+Later: automatic KHQR payment check; reminders to the owner by Telegram or SMS (today only the team is told, and the owner sees a banner); pay-per-order plans are changed by the team only.
 
 ## Step 2 (after Step 1 is selling)
 Upsell, combos, feedback, multi-language, kiosk, multi-branch comparison, automatic KHQR, split bill by person. Design for each: `docs/step2-features.md`.

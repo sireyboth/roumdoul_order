@@ -37,6 +37,10 @@ return [
 
     'telegram' => [
         'bot_token' => env('TELEGRAM_BOT_TOKEN'),
+        // Roumdoul team group: new restaurants, plan changes, payments. Empty = no alerts.
+        'platform_chat_id' => env('PLATFORM_TELEGRAM_CHAT_ID'),
+        // Optional separate bot for the team group; defaults to TELEGRAM_BOT_TOKEN.
+        'platform_bot_token' => env('PLATFORM_TELEGRAM_BOT_TOKEN'),
     ],
 
 ];

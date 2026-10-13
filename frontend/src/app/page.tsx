@@ -87,6 +87,9 @@ export default async function Home() {
                 {label}
               </a>
             ))}
+            <Link href="/terms" className={buttonClass("ghost", "sm")}>
+              Terms
+            </Link>
           </nav>
           <Link href="/staff" className={buttonClass("neutral", "sm", "ml-auto md:ml-2")}>
             <LogIn className="size-4" aria-hidden />

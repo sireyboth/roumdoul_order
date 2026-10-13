@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Enums\Feature;
 use App\Models\Branch;
 use App\Models\DailyBranchSale;
 use App\Models\DailyItemSale;
@@ -29,7 +30,7 @@ class SendDailySummaries extends Command
             ->where('is_active', true)
             ->with('company')
             ->get()
-            ->filter(fn (Branch $b) => $b->company && filled($b->company->telegram_chat_id))
+            ->filter(fn (Branch $b) => $b->company && filled($b->company->telegram_chat_id) && $b->company->hasFeature(Feature::Telegram))
             ->each(function (Branch $branch) use ($sales, $telegram, &$sent) {
                 // The day before today's business date has fully ended.
                 $day = Carbon::parse($branch->businessDate())->subDay()->toDateString();

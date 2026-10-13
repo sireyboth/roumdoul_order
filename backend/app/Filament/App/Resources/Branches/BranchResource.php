@@ -2,6 +2,7 @@
 
 namespace App\Filament\App\Resources\Branches;
 
+use App\Enums\Feature;
 use App\Filament\App\Resources\Branches\Pages\ListBranches;
 use App\Filament\App\Resources\Branches\Pages\ViewBranch;
 use App\Filament\App\Resources\Branches\RelationManagers\AreasRelationManager;
@@ -9,23 +10,24 @@ use App\Filament\App\Resources\Branches\RelationManagers\MenuAvailabilityRelatio
 use App\Models\Branch;
 use App\Services\Ordering\LocationCheck;
 use App\Support\BranchScope;
+use App\Support\FeatureGate;
 use App\Support\MapLink;
 use App\Support\Tenant;
 use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Actions\EditAction;
-use Filament\Infolists\Components\IconEntry;
-use Filament\Infolists\Components\TextEntry;
-use Filament\Support\Enums\Width;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\TimePicker;
 use Filament\Forms\Components\Toggle;
+use Filament\Infolists\Components\IconEntry;
+use Filament\Infolists\Components\TextEntry;
 use Filament\Resources\Resource;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
+use Filament\Support\Enums\Width;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Columns\ToggleColumn;
@@ -80,7 +82,10 @@ class BranchResource extends Resource
                     Toggle::make('is_active')->label('Open for orders')->default(true),
                 ]),
             Section::make('Printing')
-                ->description('Receipts and kitchen tickets print from the staff screens on an 80 mm printer.')
+                ->description(fn () => FeatureGate::allows(Feature::Printing)
+                    ? 'Receipts and kitchen tickets print from the staff screens on an 80 mm printer.'
+                    : 'Locked. '.FeatureGate::hint(Feature::Printing))
+                ->disabled(fn () => ! FeatureGate::allows(Feature::Printing))
                 ->columns(2)
                 ->schema([
                     Textarea::make('receipt_header')

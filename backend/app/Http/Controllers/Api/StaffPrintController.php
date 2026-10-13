@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Support\Uploads;
+use App\Enums\Feature;
 use App\Enums\OrderStatus;
 use App\Enums\StaffRole;
 use App\Http\Controllers\Controller;
@@ -14,8 +14,10 @@ use App\Models\Payment;
 use App\Services\Billing\BillCalculator;
 use App\Services\Billing\BillService;
 use App\Services\Ordering\OrderPresenter;
+use App\Support\FeatureGate;
 use App\Support\Money;
 use App\Support\StaffAccess;
+use App\Support\Uploads;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -29,6 +31,7 @@ class StaffPrintController extends Controller
     public function receipt(Request $request, Bill $bill, BillService $bills): JsonResponse
     {
         StaffAccess::authorize($request->user(), $bill->branch, self::BILL_PRINTERS);
+        FeatureGate::authorize($bill->branch->company, Feature::Printing);
 
         if ($bill->isOpen()) {
             $bill = $bills->refresh($bill);
@@ -104,6 +107,7 @@ class StaffPrintController extends Controller
     public function ticket(Request $request, Order $order): JsonResponse
     {
         StaffAccess::authorize($request->user(), $order->branch);
+        FeatureGate::authorize($order->branch->company, Feature::Printing);
 
         $data = $request->validate(['station' => ['nullable', Rule::in(['kitchen', 'bar'])]]);
         $row = OrderPresenter::order($order->load(['items', 'table.area']), forStaff: true);

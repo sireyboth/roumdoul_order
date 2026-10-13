@@ -1,6 +1,7 @@
 /* "Made by Roumdoul" footer on every customer page. Colours follow the Roumdoul logo (rose), light and dark. */
 
 import Image from "next/image";
+import Link from "next/link";
 import { Phone } from "lucide-react";
 import logo from "@/app/images/logo-roumdoul.png";
 import ThemeToggle from "./theme-toggle";
@@ -66,7 +67,10 @@ export default function SiteFooter({ className = "", themeToggle = true }: { cla
         </div>
       </div>
       <p className="border-t border-[var(--line)] px-4 py-3 text-center text-xs text-[var(--muted)]">
-        © {new Date().getFullYear()} Roumdoul · ប្រព័ន្ធកុម្ម៉ង់តាម QR · QR ordering
+        © {new Date().getFullYear()} Roumdoul · ប្រព័ន្ធកុម្ម៉ង់តាម QR · QR ordering ·{" "}
+        <Link href="/terms" className="font-medium underline-offset-2 hover:text-[var(--rose-strong)] hover:underline">
+          លក្ខខណ្ឌ · Terms
+        </Link>
       </p>
     </footer>
   );

@@ -2,7 +2,7 @@
 
 namespace App\Services;
 
-use App\Support\Uploads;
+use App\Enums\Feature;
 use App\Models\Branch;
 use App\Models\BranchMenuItem;
 use App\Models\Category;
@@ -10,6 +10,7 @@ use App\Models\Company;
 use App\Models\DiningTable;
 use App\Models\MenuItem;
 use App\Services\Ordering\LocationCheck;
+use App\Support\Uploads;
 use Illuminate\Support\Facades\Cache;
 
 /**
@@ -132,7 +133,18 @@ class MenuBuilder
         $company = $branch->company;
         $menuKey = sprintf('menu:%d:%d.%d', $branch->id, $company->menu_version, $branch->menu_version);
 
-        return Cache::remember($menuKey, config('tok.menu_cache_ttl'), fn () => $this->buildMenu($company, $branch->id));
+        $menu = Cache::remember($menuKey, config('tok.menu_cache_ttl'), fn () => $this->buildMenu($company, $branch->id));
+
+        // "Goes well with" is a plan feature. Removed after the cache, so a plan change applies at once.
+        if (! $company->hasFeature(Feature::Upsell)) {
+            foreach ($menu as $c => $category) {
+                foreach ($category['items'] as $i => $item) {
+                    $menu[$c]['items'][$i]['suggestions'] = [];
+                }
+            }
+        }
+
+        return $menu;
     }
 
     /** @return array<int, array<string, mixed>> */

@@ -211,6 +211,7 @@ export default function KitchenBoard({ branchId, station }: { branchId: number; 
                           {late ? <Timer className="size-4" aria-hidden /> : <Clock className="size-4" aria-hidden />}
                           {age.label}
                         </span>
+                        {board?.settings?.printing !== false && (
                         <button
                           type="button"
                           aria-label={`Print ticket #${order.number}`}
@@ -220,6 +221,7 @@ export default function KitchenBoard({ branchId, station }: { branchId: number; 
                         >
                           <Printer className="size-4" aria-hidden />
                         </button>
+                        )}
                       </span>
                     </div>
 

@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\Feature;
 use App\Models\Order;
 use App\Support\Money;
 use Illuminate\Support\Facades\Http;
@@ -18,7 +19,7 @@ class TelegramNotifier
         $order->loadMissing(['items', 'table', 'branch.company']);
         $company = $order->branch->company;
 
-        if (! $company->telegram_chat_id) {
+        if (! $company->telegram_chat_id || ! $company->hasFeature(Feature::Telegram)) {
             return;
         }
 
@@ -43,20 +44,29 @@ class TelegramNotifier
         $this->send($company->telegram_chat_id, implode("\n", $lines));
     }
 
-    public function send(string $chatId, string $html): void
+    public function send(string $chatId, string $html, ?string $token = null): void
     {
-        $token = config('services.telegram.bot_token');
+        $token = $token ?: config('services.telegram.bot_token');
 
         if (! $token) {
             return;
         }
 
         try {
-            Http::timeout(5)->post("https://api.telegram.org/bot{$token}/sendMessage", [
-                'chat_id' => $chatId,
+            $post = fn (string $chat) => Http::timeout(5)->post("https://api.telegram.org/bot{$token}/sendMessage", [
+                'chat_id' => $chat,
                 'text' => $html,
                 'parse_mode' => 'HTML',
-            ])->throw();
+            ]);
+            $response = $post($chatId);
+
+            // A group that became a "supergroup" gets a new id: send there, and say which id to set.
+            if ($newId = $response->json('parameters.migrate_to_chat_id')) {
+                Log::warning("Telegram chat {$chatId} moved to {$newId}: update the chat ID setting.");
+                $response = $post((string) $newId);
+            }
+
+            $response->throw();
         } catch (\Throwable $e) {
             Log::warning('Telegram alert failed: '.$e->getMessage());
         }

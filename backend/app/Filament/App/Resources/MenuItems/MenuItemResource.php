@@ -2,13 +2,15 @@
 
 namespace App\Filament\App\Resources\MenuItems;
 
-use App\Support\Uploads;
+use App\Enums\Feature;
 use App\Enums\Station;
 use App\Filament\App\Resources\MenuItems\Pages\ListMenuItems;
 use App\Models\MenuItem;
+use App\Support\FeatureGate;
 use App\Support\Money;
 use App\Support\Tenant;
 use App\Support\TenantScope;
+use App\Support\Uploads;
 use BackedEnum;
 use Filament\Actions\ActionGroup;
 use Filament\Actions\DeleteAction;
@@ -110,6 +112,8 @@ class MenuItemResource extends Resource
                             ->maxSize(3072),
                     ]),
                 Section::make('Goes well with')
+                    ->description(fn () => FeatureGate::allows(Feature::Upsell) ? null : 'Locked. '.FeatureGate::hint(Feature::Upsell))
+                    ->disabled(fn () => ! FeatureGate::allows(Feature::Upsell))
                     ->columnSpan(2)
                     ->schema([
                         Select::make('suggestions')

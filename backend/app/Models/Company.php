@@ -2,9 +2,10 @@
 
 namespace App\Models;
 
-use App\Support\Uploads;
 use App\Enums\CompanyStatus;
+use App\Enums\Feature;
 use App\Models\Concerns\Auditable;
+use App\Support\Uploads;
 use Filament\Models\Contracts\HasAvatar;
 use Filament\Models\Contracts\HasName;
 use Illuminate\Database\Eloquent\Model;
@@ -18,7 +19,7 @@ class Company extends Model implements HasAvatar, HasName
     use Auditable, SoftDeletes;
 
     protected $fillable = [
-        'name', 'slug', 'email', 'phone', 'logo_path', 'cover_path', 'tagline', 'khqr_image_path', 'timezone', 'currency', 'khr_per_usd',
+        'name', 'slug', 'email', 'phone', 'contact_telegram', 'logo_path', 'cover_path', 'tagline', 'khqr_image_path', 'timezone', 'currency', 'khr_per_usd',
         'vat_bp', 'service_charge_bp', 'prices_include_vat', 'status', 'trial_ends_at',
         'telegram_chat_id', 'coreos_company_id',
     ];
@@ -58,6 +59,46 @@ class Company extends Model implements HasAvatar, HasName
     public function subscription(): HasOne
     {
         return $this->hasOne(Subscription::class)->latestOfMany();
+    }
+
+    public function subscriptions(): HasMany
+    {
+        return $this->hasMany(Subscription::class);
+    }
+
+    public function termsAcceptances(): HasMany
+    {
+        return $this->hasMany(TermsAcceptance::class);
+    }
+
+    public function planInvoices(): HasMany
+    {
+        return $this->hasMany(PlanInvoice::class);
+    }
+
+    /** Does the current plan include this feature? (docs/roadmap.md C1) */
+    public function hasFeature(Feature $feature): bool
+    {
+        return (bool) $this->subscription?->plan?->hasFeature($feature);
+    }
+
+    /**
+     * An unpaid renewal more than the grace days late: the back office turns read-only
+     * (orders and staff screens keep working). Cached for the request.
+     */
+    public function overdueInvoice(): ?PlanInvoice
+    {
+        return once(fn () => $this->planInvoices()
+            ->pending()
+            ->where('kind', '!=', PlanInvoice::KIND_UPGRADE)
+            ->where('due_at', '<', now()->subDays((int) config('tok.billing_grace_days')))
+            ->orderBy('due_at')
+            ->first());
+    }
+
+    public function isReadOnly(): bool
+    {
+        return $this->overdueInvoice() !== null;
     }
 
     public function branches(): HasMany

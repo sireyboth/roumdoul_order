@@ -209,6 +209,7 @@ export default function CashierBoard({ branchId }: { branchId: number }) {
           sessionId={selected.session.id}
           tableName={selected.name}
           shiftOpen={Boolean(shift?.shift)}
+          printing={data?.printing !== false}
           onStartShift={() => setShiftOpen(true)}
           onChanged={async () => {
             await refresh();
@@ -339,6 +340,7 @@ function BillSheet({
   sessionId,
   tableName,
   shiftOpen,
+  printing,
   onStartShift,
   onChanged,
   onClose,
@@ -346,6 +348,8 @@ function BillSheet({
   sessionId: number;
   tableName: string;
   shiftOpen: boolean;
+  /** The plan includes printing. */
+  printing: boolean;
   onStartShift: () => void;
   onChanged: () => Promise<void>;
   onClose: () => void;
@@ -557,7 +561,7 @@ function BillSheet({
               )}
             </dl>
 
-            {bill.status !== "void" && (
+            {printing && bill.status !== "void" && (
               <Button
                 tone={bill.status === "paid" ? "dark" : "neutral"}
                 icon={Printer}

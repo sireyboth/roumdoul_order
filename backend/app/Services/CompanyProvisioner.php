@@ -32,6 +32,7 @@ class CompanyProvisioner
                 'name' => $data['name'],
                 'slug' => $this->uniqueSlug($data['slug'] ?? $data['name']),
                 'phone' => $data['phone'] ?? null,
+                'contact_telegram' => ($data['contact_telegram'] ?? null) ?: null,
                 'logo_path' => $data['logo_path'] ?? null,
                 'cover_path' => $data['cover_path'] ?? null,
                 'tagline' => ($data['tagline'] ?? null) ?: null,
@@ -50,6 +51,9 @@ class CompanyProvisioner
                     'plan_id' => $plan->id,
                     'status' => 'trialing',
                     'interval' => 'monthly',
+                    // Price agreed at sign-up; the first invoice after the trial uses it.
+                    'price_cents' => $plan->isPerOrder() ? 0 : $plan->priceFor('monthly'),
+                    'currency' => $plan->currency,
                     'starts_at' => now(),
                     'ends_at' => $company->trial_ends_at,
                 ]);

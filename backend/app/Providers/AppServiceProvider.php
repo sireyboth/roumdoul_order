@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Support\ReadOnlyGuard;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
@@ -22,6 +23,9 @@ class AppServiceProvider extends ServiceProvider
 
         // Catch typos in mass-assignment during development instead of losing data silently.
         Model::preventSilentlyDiscardingAttributes(! $this->app->isProduction());
+
+        // Plan payment overdue: the back office can't save anything except paying (docs/roadmap.md C2).
+        ReadOnlyGuard::register();
 
         // Customer traffic arrives through the Next.js server, so limits are per table
         // (the QR token), not per IP address, which would be shared by every customer.

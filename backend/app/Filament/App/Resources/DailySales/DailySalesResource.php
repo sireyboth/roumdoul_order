@@ -2,11 +2,13 @@
 
 namespace App\Filament\App\Resources\DailySales;
 
+use App\Enums\Feature;
 use App\Filament\App\Resources\DailySales\Pages\ListDailySales;
 use App\Models\Branch;
 use App\Models\DailyBranchSale;
 use App\Services\Reports\CsvExport;
 use App\Support\BranchScope;
+use App\Support\FeatureGate;
 use App\Support\Money;
 use App\Support\Tenant;
 use BackedEnum;
@@ -58,6 +60,8 @@ class DailySalesResource extends Resource
             ->label($label)
             ->icon(Heroicon::OutlinedArrowDownTray)
             ->color('gray')
+            ->disabled(fn () => ! FeatureGate::allows(Feature::Export))
+            ->tooltip(fn () => FeatureGate::allows(Feature::Export) ? null : FeatureGate::hint(Feature::Export))
             ->modalHeading("Export {$label}")
             ->modalDescription('A spreadsheet file (CSV) that opens in Excel, Khmer included.')
             ->modalSubmitActionLabel('Download')

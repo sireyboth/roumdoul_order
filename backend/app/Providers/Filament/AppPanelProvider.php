@@ -2,10 +2,11 @@
 
 namespace App\Providers\Filament;
 
-use App\Filament\Auth\Login;
 use App\Filament\App\Pages\Tenancy\EditCompanyProfile;
-use App\Http\Middleware\UseCompanyTimezone;
 use App\Filament\App\Pages\Tenancy\RegisterCompany;
+use App\Filament\App\Pages\YourPlan;
+use App\Filament\Auth\Login;
+use App\Http\Middleware\UseCompanyTimezone;
 use App\Models\Company;
 use Filament\FontProviders\GoogleFontProvider;
 use Filament\Http\Middleware\Authenticate;
@@ -18,12 +19,12 @@ use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
 use Filament\Support\Enums\Width;
 use Filament\View\PanelsRenderHook;
-use Illuminate\Support\HtmlString;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\StartSession;
+use Illuminate\Support\HtmlString;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
 
 /**
@@ -72,8 +73,11 @@ class AppPanelProvider extends PanelProvider
             ->errorNotifications(fn () => app()->environment('production'))
             ->discoverResources(in: app_path('Filament/App/Resources'), for: 'App\Filament\App\Resources')
             ->discoverWidgets(in: app_path('Filament/App/Widgets'), for: 'App\Filament\App\Widgets')
+            // Plan payment due soon or late (read-only), on every back-office page.
+            ->renderHook(PanelsRenderHook::CONTENT_START, fn () => view('filament.app.billing-banner'))
             ->pages([
                 Dashboard::class,
+                YourPlan::class,
             ])
             ->middleware([
                 EncryptCookies::class,

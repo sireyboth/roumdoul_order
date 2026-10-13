@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Enums\Feature;
 use App\Enums\OrderStatus;
 use App\Enums\StaffRole;
 use App\Http\Controllers\Controller;
@@ -59,7 +60,11 @@ class StaffBoardController extends Controller
 
         return response()->json(['data' => [
             'server_time' => now()->toIso8601String(),
-            'settings' => ['auto_print_kitchen' => (bool) $branch->auto_print_kitchen],
+            'settings' => [
+                // Printing is a plan feature: without it the screen hides print buttons and never auto-prints.
+                'printing' => $printing = $branch->company->hasFeature(Feature::Printing),
+                'auto_print_kitchen' => $printing && (bool) $branch->auto_print_kitchen,
+            ],
             'orders' => $data,
             'requests' => $requests,
         ]])->header('Cache-Control', 'no-store');

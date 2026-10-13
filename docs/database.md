@@ -99,7 +99,8 @@ A restaurant business = Filament tenant. Holds currency, riel rate, VAT/service 
 | `name` | varchar |  |  |  |
 | `slug` | varchar |  |  |  |
 | `email` | varchar | yes |  |  |
-| `phone` | varchar | yes |  |  |
+| `phone` | varchar | yes |  | required at sign-up (the Roumdoul team calls here) |
+| `contact_telegram` | varchar(64) | yes |  | owner's Telegram (@username or phone), for plan and payment contact |
 | `logo_path` | varchar | yes |  | required at sign-up; top of the customer menu |
 | `cover_path` | varchar | yes |  | wide photo behind the name on the customer menu |
 | `tagline` | varchar(120) | yes |  | short line under the name, e.g. "Coffee & brunch in BKK1" |
@@ -123,21 +124,90 @@ Indexes: `(coreos_company_id)`, `UNIQUE (slug)`, `(status)`
 
 ### `subscriptions`
 
-Which plan a company is on. `Company::subscription()` = latest row.
+Which plan a company is on, at what price, until when. `Company::subscription()` = latest row. A plan change **ends** the row (`status` ended, `ended_at`) and starts a new one, so the history stays (`SubscriptionService`). The plan's features are read live from this row's plan (`Company::hasFeature()`).
 
 | Column | Type | Null | Default | References |
 |---|---|---|---|---|
 | `id` | integer |  |  |  |
 | `company_id` | integer |  |  | companies.id (cascade) |
 | `plan_id` | integer |  |  | plans.id (restrict) |
-| `status` | varchar |  | active |  |
-| `interval` | varchar |  | monthly |  |
+| `status` | varchar |  | active | trialing, active, ended |
+| `interval` | varchar |  | monthly | monthly, yearly |
+| `price_cents` | integer |  | 0 | price per interval agreed when this row started (snapshot; 0 for pay-per-order) |
+| `currency` | char(3) |  | USD |  |
+| `scheduled_plan_id` | integer | yes |  | plans.id (null on delete): downgrade starting at `ends_at` |
+| `scheduled_interval` | varchar | yes |  |  |
 | `starts_at` | datetime | yes |  |  |
-| `ends_at` | datetime | yes |  |  |
+| `ends_at` | datetime | yes |  | end of the paid period (or the free trial) = next renewal |
+| `ended_at` | datetime | yes |  | replaced by another plan |
 | `created_at` | datetime | yes |  |  |
 | `updated_at` | datetime | yes |  |  |
 
 Indexes: `(company_id, status)`
+
+### `plan_invoices`
+
+What a restaurant owes Roumdoul for its plan. Never deleted: void with a reason. Made by `SubscriptionService`: `upgrade` when a plan change costs more (the difference for the days left), `first` / `renewal` a few days before the period ends (`subscriptions:run`, hourly; `INVOICE_DAYS_BEFORE`, default 3). Paying (confirmed in `/admin > Plan invoices`) applies it. An unpaid `first` / `renewal` more than `BILLING_GRACE_DAYS` (default 3) after `due_at` makes the back office read-only (`Company::isReadOnly()`).
+
+| Column | Type | Null | Default | References |
+|---|---|---|---|---|
+| `id` | integer |  |  | shown as INV-000012 |
+| `company_id` | integer |  |  | companies.id (cascade) |
+| `subscription_id` | integer | yes |  | subscriptions.id (null on delete) |
+| `kind` | varchar |  |  | first, renewal, upgrade |
+| `plan_id` | integer |  |  | plans.id: the plan this pays for |
+| `interval` | varchar |  |  | monthly, yearly |
+| `amount_cents` | integer |  |  |  |
+| `currency` | char(3) |  | USD |  |
+| `description` | varchar |  |  | how the amount was worked out, e.g. "($39.00 − $19.00) × 16/31 days" |
+| `period_starts_at` | datetime |  |  |  |
+| `period_ends_at` | datetime |  |  |  |
+| `due_at` | datetime |  |  |  |
+| `status` | varchar |  | pending | pending, paid, void |
+| `requested_by` | integer | yes |  | users.id (null on delete) |
+| `proof_path` | varchar | yes |  | owner's transfer screenshot (uploads disk) |
+| `proof_note` | varchar | yes |  |  |
+| `proof_sent_at` | datetime | yes |  |  |
+| `paid_at` | datetime | yes |  |  |
+| `paid_method` | varchar | yes |  | aba, khqr, cash, other |
+| `paid_reference` | varchar | yes |  |  |
+| `confirmed_by` | integer | yes |  | users.id (null on delete) |
+| `void_reason` | varchar | yes |  |  |
+| `voided_by` | integer | yes |  | users.id (null on delete) |
+| `overdue_notified_at` | datetime | yes |  | team told it is late (once) |
+| `created_at` | datetime | yes |  |  |
+| `updated_at` | datetime | yes |  |  |
+
+Indexes: `(company_id, status)`, `(status, due_at)`
+
+### `terms_acceptances`
+
+Proof that an owner agreed to the restaurant terms (frontend `/terms`, text in `frontend/src/lib/terms.ts`): at sign-up and before every plan change they make on "Your plan". Written by `App\Support\Terms::record()`, never updated or deleted.
+
+| Column | Type | Null | Default | References |
+|---|---|---|---|---|
+| `id` | integer |  |  |  |
+| `company_id` | integer |  |  | companies.id (cascade) |
+| `user_id` | integer | yes |  | users.id (null on delete) |
+| `version` | varchar(20) |  |  | `TERMS_VERSION` at the time, e.g. 2026-10-13 |
+| `context` | varchar(20) |  |  | signup, plan_change |
+| `detail` | varchar | yes |  | e.g. "Starter → Pro (monthly), $10.32 now" |
+| `ip` | varchar(45) | yes |  |  |
+| `user_agent` | varchar | yes |  |  |
+| `created_at` | datetime | yes |  |  |
+
+Indexes: `(company_id, created_at)`
+
+### `platform_settings`
+
+Roumdoul's own settings, edited in `/admin > Payment settings`, cached (`PlatformSetting`). Keys: `payment_qr_path`, `payment_account_name`, `payment_account_number`, `payment_note`, `support_phone`, `support_telegram`.
+
+| Column | Type | Null | Default | References |
+|---|---|---|---|---|
+| `key` | varchar(60) |  |  | primary key |
+| `value` | text | yes |  |  |
+| `created_at` | datetime | yes |  |  |
+| `updated_at` | datetime | yes |  |  |
 
 ### `company_user`
 

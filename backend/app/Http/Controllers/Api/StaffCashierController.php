@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Enums\Feature;
 use App\Enums\OrderStatus;
 use App\Enums\PaymentMethod;
 use App\Enums\StaffRole;
@@ -74,6 +75,8 @@ class StaffCashierController extends Controller
             'server_time' => now()->toIso8601String(),
             'currency' => $branch->company->currency,
             'khr_per_usd' => $branch->company->khr_per_usd,
+            // Plan feature: without it the bill has no Print button.
+            'printing' => $branch->company->hasFeature(Feature::Printing),
             'tables' => $tables,
         ]])->header('Cache-Control', 'no-store');
     }

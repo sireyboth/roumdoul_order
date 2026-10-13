@@ -2,6 +2,8 @@
 
 namespace App\Filament\App\Pages\Tenancy;
 
+use App\Enums\Feature;
+use App\Support\FeatureGate;
 use App\Support\Uploads;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Select;
@@ -26,6 +28,11 @@ class EditCompanyProfile extends EditTenantProfile
                 ->schema([
                     TextInput::make('name')->required()->maxLength(120),
                     TextInput::make('phone')->tel()->maxLength(30),
+                    TextInput::make('contact_telegram')
+                        ->label('Your Telegram')
+                        ->placeholder('@username or phone')
+                        ->helperText('So the Roumdoul team can reach you about your plan and payments.')
+                        ->maxLength(64),
                     TextInput::make('email')->email()->maxLength(255),
                     TextInput::make('tagline')
                         ->label('Short description')
@@ -90,6 +97,8 @@ class EditCompanyProfile extends EditTenantProfile
                         ->label('Menu prices already include VAT'),
                 ]),
             Section::make('Alerts')
+                ->description(fn () => FeatureGate::allows(Feature::Telegram) ? null : 'Locked. '.FeatureGate::hint(Feature::Telegram))
+                ->disabled(fn () => ! FeatureGate::allows(Feature::Telegram))
                 ->schema([
                     TextInput::make('telegram_chat_id')
                         ->label('Telegram chat ID')

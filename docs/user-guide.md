@@ -35,11 +35,20 @@ Your own panel to run the business: plans and every restaurant on the platform.
 
 1. **Sign in**: `admin@roumdoul.test` / password on the demo.
 2. **Set your prices**: Plans: monthly / yearly price, how many branches, tables and staff, which features. The demo prices ($19 / $39 / $99) are placeholders. Active plans show on the public start page (the frontend home page, e.g. tok.roumdoul.com) in sort order, on the next page load. **Plan features** lists every feature the system has, with its status: **Built**, or **Coming soon** (greyed out on the start page). The developers set the status in the code, in the same update that finishes the feature, so you can't set it by hand. There you can rename a feature and drag to reorder. A new feature appears in the list by itself with "Not in any plan yet": tick it on the plans that should include it. A plan with **Price / order** filled is a pay-per-order plan (demo: "Pay per order", $0.01): the start page shows only "From $0.01 / order" and a Call us button, no limits or features, so competitors don't see the details.
-3. **Add a restaurant yourself (after a sales visit)**: Restaurants → Add restaurant: name, first branch, currency, plan, owner name, email and password. They can then sign in at /app.
-4. **Or let them sign up**: Owners can register themselves at `/app/register` and get a free trial (14 days by default; change it with `TRIAL_DAYS` in `backend/.env`).
-5. **Manage restaurants**: Edit to change status (trial, active, suspended, cancelled) or the trial end date. When the trial ends, or the restaurant is suspended or cancelled, its QR codes and staff screens stop working. Set **Active** once they pay.
-6. **Change plan**: Restaurants → Change plan (e.g. Starter → Pro). The new branch / table / staff limits apply right away; if they are already over a lower limit, nothing is removed, they just can't add more.
-7. **Block a person**: Users → Block (abuse, lost phone, unpaid). They are signed out everywhere and can't sign in until you Unblock them.
+3. **Payment settings (once)**: upload your ABA / KHQR picture, account name and number, payment instructions, and your phone and Telegram. Owners see these on their **Your plan** page when they have something to pay.
+4. **Add a restaurant yourself (after a sales visit)**: Restaurants → Add restaurant: name, first branch, currency, plan, phone, Telegram, owner name, email and password. They can then sign in at /app.
+5. **Or let them sign up**: Owners can register themselves at `/app/register` and get a free trial (14 days by default; change it with `TRIAL_DAYS` in `backend/.env`). Phone is required, Telegram optional, and they must tick **I agree to the Terms**. Your Telegram group gets a message with their contacts.
+6. **Manage restaurants**: The list shows plan, price, **Paid until**, contact and status (**Read-only (not paid)** in red when a payment is late). Edit to change status (trial, active, suspended, cancelled), the trial end date or contacts. When the trial ends, or the restaurant is suspended or cancelled, its QR codes and staff screens stop working.
+7. **Change plan**: Restaurants → Change plan. Pick the plan and monthly / yearly; the window says what happens before you confirm:
+   - **Upgrade** (costs more): an invoice for the difference for the days left, e.g. Starter $19 → Pro $39 on day 16 of 31 = $10.32. The new plan starts when the invoice is paid. If they already paid you, tick **They already paid** and it starts at once.
+   - **Downgrade** (costs less): starts at their next renewal, no refund. **Cancel downgrade** undoes it before then.
+   - During the free trial, or a pay-per-order plan: switches at once, nothing to pay automatically.
+   - Limits never delete anything: if they are over a lower limit, they just can't add more.
+8. **Plan invoices**: everything to collect (the menu shows how many). Renewal invoices are made by themselves 3 days before the period ends. When the owner taps "I have paid", you get their screenshot on Telegram and here. Check your ABA account, then **Confirm payment** (method and reference): the upgrade or renewal applies at once. **Void** with a reason if it is wrong. Nothing is ever deleted.
+9. **Terms and conditions**: the public page `/terms` (link in the start page menu and every footer). Owners agree at sign-up and again before every plan change; each agreement is saved (who, when, which version, what they bought) and the Restaurants list shows the latest in **Terms**. To change the terms, edit `frontend/src/lib/terms.ts` and set the same new date in `TERMS_VERSION` (backend `.env`); owners are asked again at their next plan change. The text is a plain-language draft: have it checked by someone who knows Cambodian law.
+10. **Late payments**: 3 days after the due date an unpaid renewal turns that restaurant's back office **read-only**: they can't change anything except paying on Your plan. Orders, staff screens and QR codes keep working, so their guests are never affected. Confirming the payment unlocks it. To stop the shop completely, set it to Suspended.
+11. **Telegram group**: new restaurants, upgrade requests, downgrades, invoices to collect, payments sent, payments confirmed, voids and late payments, each with the restaurant's phone and Telegram so you can contact them. Set the group in `backend/.env`: `TELEGRAM_BOT_TOKEN` and `PLATFORM_TELEGRAM_CHAT_ID` (the bot must be in the group). The scheduler (`php artisan schedule:work`, opened by start.bat) must run for renewals and late checks.
+12. **Block a person**: Users → Block (abuse, lost phone, unpaid). They are signed out everywhere and can't sign in until you Unblock them.
 
 ## Owner: first-day setup
 
@@ -47,7 +56,7 @@ Your own panel to run the business: plans and every restaurant on the platform.
 
 About 30 minutes for a small café. The dashboard shows what is still missing.
 
-1. **Register**: Sign up, then “Register your restaurant”: name, **logo** (required), short description, cover photo, phone, first branch name, currency ($ or ៛).
+1. **Register**: Sign up, then “Register your restaurant”: name, **logo** (required), short description, cover photo, **phone** (required), Telegram, first branch name, currency ($ or ៛), and tick **I agree to the Terms and conditions** (link opens the terms). The Roumdoul team gets your contacts and calls to help you set up.
 2. **Restaurant settings**: Menu (top left) → Restaurant settings:
    - Logo, cover photo, short description shown on the customer menu
    - **KHQR code picture** from your bank: printed on bills so customers can scan and pay
@@ -132,6 +141,11 @@ What to check and where.
 4. **Restaurant → Daily sales**: One row per branch per business day. **Export** orders, payments or items sold as a CSV file that opens in Excel (Khmer included).
 5. **Restaurant → Shifts**: Who opened and closed the drawer, expected vs counted cash, differences, cash in / out.
 6. **Menu changes**: Edit prices, photos and availability any time; customers see changes on their next scan.
+7. **Your plan** (owners only; Restaurant → Your plan): your plan, price and **Paid until**. A yellow bar at the top of every page shows when a payment is due, red when it is late.
+   - **To pay**: scan Roumdoul's ABA / KHQR shown there, then tap **I have paid** and add the screenshot. Roumdoul confirms, usually the same day.
+   - **Change plan**: pick a plan and monthly / yearly and see the price. Under **Before you confirm** the window repeats the key terms of that change (what you pay now, refunds, renewal, late payment); tick **I agree** and press **Confirm**. Upgrade: pay only the difference for the days left; it starts once Roumdoul confirms the payment. Downgrade: starts at your next renewal, no refund (**Keep my plan** cancels it). For pay-per-order plans, call Roumdoul.
+   - **Late payment**: 3 days after the due date the back office becomes read-only until you pay. Orders, staff screens and QR codes keep working.
+   - **Locked features**: things your plan doesn't include show "Locked. Available on the Pro plan" (printing settings, CSV export, Telegram alerts, "Goes well with"). Staff and guests simply don't see them. Upgrade and they come back with everything you set before.
 
 ## When something goes wrong
 
@@ -153,7 +167,15 @@ Start Chrome on the kitchen / cashier computer with `--kiosk-printing` and set t
 
 ### Telegram messages don't arrive
 
-Set `TELEGRAM_BOT_TOKEN` in backend/.env, add the bot to your group, put the group chat ID in Restaurant settings, and keep the scheduler window open for day-end summaries.
+Set `TELEGRAM_BOT_TOKEN` in backend/.env, add the bot to your group, put the group chat ID in Restaurant settings, and keep the scheduler window open for day-end summaries. The restaurant's plan must include Telegram alerts. If a group was turned into a "supergroup" it gets a new ID (starting with -100): messages still go there, and `storage/logs/laravel.log` says which ID to set. Same for the Roumdoul team group (`PLATFORM_TELEGRAM_CHAT_ID`).
+
+### The back office says "Read-only"
+
+A plan payment is more than 3 days late. The owner pays on **Your plan** (I have paid + screenshot); once Roumdoul confirms it in /admin > Plan invoices, everything unlocks. Orders and staff screens were never stopped.
+
+### There is no Print button on the staff screens
+
+Printing is not in the restaurant's plan. The owner can upgrade on **Your plan**.
 
 ### Someone can't sign in
 

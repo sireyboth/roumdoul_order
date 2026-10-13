@@ -48,7 +48,8 @@ class AdminCompaniesTest extends TestCase
         $chain = Plan::query()->where('code', 'chain')->firstOrFail();
 
         Livewire::test(ListCompanies::class)
-            ->callTableAction('changePlan', $this->company, ['plan_id' => $chain->id])
+            // No plan yet = nothing paid: an invoice for the full price, here already paid in cash.
+            ->callTableAction('changePlan', $this->company, ['plan_id' => $chain->id, 'interval' => 'monthly', 'paid' => true, 'method' => 'cash'])
             ->assertHasNoTableActionErrors();
 
         $this->assertSame($chain->id, $this->company->fresh()->subscription->plan_id);

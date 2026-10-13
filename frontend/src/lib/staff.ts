@@ -35,7 +35,8 @@ export type BoardRequest = { id: number; type: "waiter" | "bill"; table: string 
 
 export type Board = {
   server_time: string;
-  settings?: { auto_print_kitchen: boolean };
+  /** printing: false when the restaurant's plan has no printing (hide print buttons). */
+  settings?: { auto_print_kitchen: boolean; printing?: boolean };
   orders: BoardOrder[];
   requests: BoardRequest[];
 };
@@ -57,7 +58,8 @@ export type CashierTable = {
   } | null;
 };
 
-export type CashierTables = { server_time: string; currency: "USD" | "KHR"; khr_per_usd: number; tables: CashierTable[] };
+/** printing: false when the restaurant's plan has no printing (no Print button on the bill). */
+export type CashierTables = { server_time: string; currency: "USD" | "KHR"; khr_per_usd: number; printing?: boolean; tables: CashierTable[] };
 
 export type BillOrder = Omit<BoardOrder, "status"> & {
   status: BoardOrder["status"] | "completed" | "cancelled";

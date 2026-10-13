@@ -249,6 +249,9 @@ class BackOfficeFormsTest extends TestCase
                 'logo_path' => UploadedFile::fake()->image('logo.png', 200, 200),
                 'cover_path' => UploadedFile::fake()->image('cover.jpg', 1200, 500),
                 'tagline' => 'Coffee & brunch by the river',
+                'phone' => '012 345 678',
+                'contact_telegram' => '@browncoffee',
+                'accept_terms' => true,
                 'branch_name' => 'Riverside',
                 'currency' => 'USD',
             ])
