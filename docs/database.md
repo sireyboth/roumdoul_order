@@ -51,7 +51,7 @@ Indexes: `UNIQUE (email)`
 
 ### `plans`
 
-Price list and limits (branches, tables, staff) plus feature keys. Edited in `/admin > Plans`.
+Price list and limits (branches, tables, staff) plus feature keys (`plan_features.key`). Edited in `/admin > Plans`.
 
 | Column | Type | Null | Default | References |
 |---|---|---|---|---|
@@ -73,6 +73,21 @@ Price list and limits (branches, tables, staff) plus feature keys. Edited in `/a
 | `updated_at` | datetime | yes |  |  |
 
 Indexes: `UNIQUE (code)`
+
+### `plan_features`
+
+Admin's name and order for each feature in `App\Enums\Feature`, shown on the start page price cards. Edited in `/admin > Plan features` (drag to reorder). The list of features and whether each is built (else "Coming soon") come from the code, never from this table. Missing rows are added when the admin page opens (`PlanFeature::syncWithCode()`); until then the default name is used. `plans.features` stores the keys; keys not in the enum are not shown.
+
+| Column | Type | Null | Default | References |
+|---|---|---|---|---|
+| `id` | integer |  |  |  |
+| `key` | varchar |  |  |  |
+| `name` | varchar |  |  |  |
+| `sort_order` | integer |  | 0 |  |
+| `created_at` | datetime | yes |  |  |
+| `updated_at` | datetime | yes |  |  |
+
+Indexes: `UNIQUE (key)`
 
 ### `companies`
 

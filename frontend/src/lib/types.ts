@@ -131,5 +131,8 @@ export type Plan = {
   /** Set only on a pay-per-order plan (shown as "From $x per order", no details). */
   price_per_order: number | null;
   currency: string;
-  features: string[];
+  /** In display order; names and "coming soon" are set in /admin > Plan features. */
+  features: PlanFeature[];
 };
+
+export type PlanFeature = { key: string; name: string; coming_soon: boolean };

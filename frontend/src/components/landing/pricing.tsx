@@ -1,31 +1,11 @@
 "use client";
 
-/* Price cards on the start page. Plans, prices and features come from /admin > Plans. */
+/* Price cards on the start page. Plans and prices come from /admin > Plans, feature names from /admin > Plan features, "Coming soon" from the code (backend App\Enums\Feature::isBuilt()). */
 
 import { useState } from "react";
 import { ArrowRight, Check, Clock, Phone, Receipt } from "lucide-react";
 import type { Plan } from "@/lib/types";
 import { buttonClass } from "../ui";
-
-/* What each feature key in plans.features means. Keys marked "soon" are planned for Step 2. */
-const FEATURES: Record<string, { label: string; soon?: boolean }> = {
-  telegram: { label: "Telegram day-end sales summary" },
-  printing: { label: "Receipt and kitchen ticket printing" },
-  export: { label: "Sales reports and CSV export" },
-  upsell: { label: "“Goes well with” suggestions" },
-  khqr_auto: { label: "Automatic KHQR payment check", soon: true },
-  combos: { label: "Combo and set menus", soon: true },
-  kiosk: { label: "Self-order kiosk mode", soon: true },
-  multi_branch_reports: { label: "Compare branches side by side", soon: true },
-};
-
-function featureLabel(key: string) {
-  return (
-    FEATURES[key] ?? {
-      label: key.replace(/_/g, " ").replace(/^\w/, (c) => c.toUpperCase()),
-    }
-  );
-}
 
 /** $19 for whole dollars, $19.50 otherwise; riel as 75,000៛. */
 function price(minor: number, currency: string) {
@@ -193,11 +173,10 @@ export default function Pricing({
                       {text}
                     </li>
                   ))}
-                  {plan.features.map((key) => {
-                    const feature = featureLabel(key);
+                  {plan.features.map((feature) => {
                     return (
-                      <li key={key} className="flex gap-2.5">
-                        {feature.soon ? (
+                      <li key={feature.key} className="flex gap-2.5">
+                        {feature.coming_soon ? (
                           <Clock
                             className="mt-0.5 size-[18px] shrink-0 text-[var(--muted)]"
                             strokeWidth={2.2}
@@ -211,10 +190,10 @@ export default function Pricing({
                           />
                         )}
                         <span
-                          className={feature.soon ? "text-[var(--muted)]" : ""}
+                          className={feature.coming_soon ? "text-[var(--muted)]" : ""}
                         >
-                          {feature.label}
-                          {feature.soon && (
+                          {feature.name}
+                          {feature.coming_soon && (
                             <span className="ml-1.5 rounded-full bg-[var(--chip)] px-2 py-0.5 text-xs font-medium whitespace-nowrap">
                               Coming soon
                             </span>

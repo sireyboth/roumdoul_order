@@ -4,6 +4,7 @@ namespace App\Filament\Admin\Resources\Plans;
 
 use App\Filament\Admin\Resources\Plans\Pages\ListPlans;
 use App\Models\Plan;
+use App\Models\PlanFeature;
 use App\Support\Money;
 use BackedEnum;
 use Filament\Actions\EditAction;
@@ -23,18 +24,6 @@ class PlanResource extends Resource
     protected static ?string $model = Plan::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedTag;
-
-    /** Feature switches a plan can unlock. Extend as Step 1-2 features ship. */
-    public const FEATURES = [
-        'telegram' => 'Telegram alerts',
-        'printing' => 'Kitchen & receipt printing',
-        'khqr_auto' => 'Automatic KHQR confirmation',
-        'upsell' => 'Upsell suggestions',
-        'combos' => 'Combo / set menus',
-        'kiosk' => 'Kiosk mode',
-        'multi_branch_reports' => 'Multi-branch comparison',
-        'export' => 'Excel export',
-    ];
 
     public static function form(Schema $schema): Schema
     {
@@ -61,7 +50,9 @@ class PlanResource extends Resource
                     ->formatStateUsing(fn ($state) => Money::fromMinor($state, 'USD'))
                     ->dehydrateStateUsing(fn ($state) => Money::toMinor($state, 'USD')),
             ]),
-            CheckboxList::make('features')->options(self::FEATURES)->columns(2),
+            CheckboxList::make('features')->options(fn () => PlanFeature::options())->columns(2)
+                ->descriptions(fn () => PlanFeature::catalog()->reject->built()->map(fn () => 'Coming soon')->all())
+                ->helperText('Names and order are set in Plan features. "Coming soon" ones show greyed out on the start page until they are built.'),
         ]);
     }
 

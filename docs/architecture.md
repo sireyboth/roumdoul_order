@@ -17,7 +17,7 @@ Diagrams: the "Roumdoul Order System" page, https://claude.ai/artifact/XFXdQJczE
 - Only Laravel writes to the database.
 - Next.js holds no data; it renders and proxies. `API_URL` is server-only.
 - Rate limits are per QR token (`public-read` 240/min, `public-write` 20/min), because all customer traffic reaches Laravel from the Next.js server's IP.
-- Start page `/` (sales page for restaurant owners): server component reads `GET /api/public/plans` (active plans, prices in cents, `throttle:public-site`) on every visit (`cache: "no-store"`, so the page is rendered per request, not at build time), so price changes in /admin > Plans show on the next page load. "Start free trial" links to `{API_URL}/app/register`. Every `/staff/*` screen gets the Roumdoul footer from `app/staff/layout.tsx` (not the 80 mm print pages).
+- Start page `/` (sales page for restaurant owners): server component reads `GET /api/public/plans` (active plans, prices in cents, features with name + order from `plan_features` and `coming_soon` = not `App\Enums\Feature::isBuilt()`, `throttle:public-site`) on every visit (`cache: "no-store"`, so the page is rendered per request, not at build time), so price changes in /admin > Plans show on the next page load. "Start free trial" links to `{API_URL}/app/register`. Every `/staff/*` screen gets the Roumdoul footer from `app/staff/layout.tsx` (not the 80 mm print pages).
 
 ## Who uses what
 

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Plan;
+use App\Models\PlanFeature;
 use Illuminate\Http\JsonResponse;
 
 /** Price list for the public start page (tok.roumdoul.com). Prices are edited in /admin > Plans. */
@@ -11,6 +12,10 @@ class PublicPlanController extends Controller
 {
     public function index(): JsonResponse
     {
+        // Names and order from /admin > Plan features, "Coming soon" from the code (App\Enums\Feature).
+        // Keys that are no longer in the code are skipped.
+        $features = PlanFeature::catalog();
+
         $plans = Plan::query()
             ->where('is_active', true)
             ->orderBy('sort_order')
@@ -30,7 +35,15 @@ class PublicPlanController extends Controller
                 // Set only on a pay-per-order plan.
                 'price_per_order' => $plan->price_per_order_cents,
                 'currency' => $plan->currency,
-                'features' => array_values($plan->features ?? []),
+                // In the Plan features order, whatever order they were ticked in.
+                'features' => $features
+                    ->only($plan->features ?? [])
+                    ->map(fn (PlanFeature $feature) => [
+                        'key' => $feature->key,
+                        'name' => $feature->name,
+                        'coming_soon' => ! $feature->built(),
+                    ])
+                    ->values(),
             ]);
 
         return response()->json(['data' => $plans]);
