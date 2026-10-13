@@ -27,7 +27,7 @@ class AppServiceProvider extends ServiceProvider
         // (the QR token), not per IP address, which would be shared by every customer.
         RateLimiter::for('public-read', fn (Request $request) => Limit::perMinute(240)->by('r|'.$request->route('token')));
         RateLimiter::for('public-write', fn (Request $request) => Limit::perMinute(20)->by('w|'.$request->route('token')));
-        // Start page data (price list): the Next.js server caches it, so one shared bucket is enough.
-        RateLimiter::for('public-site', fn () => Limit::perMinute(120)->by('site'));
+        // Start page data (price list): read on every start page visit, always through the Next.js server, so one shared bucket.
+        RateLimiter::for('public-site', fn () => Limit::perMinute(600)->by('site'));
     }
 }
